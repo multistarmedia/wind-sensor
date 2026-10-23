@@ -7,7 +7,7 @@ export interface AppCtx {
   navigate: (route: Route) => void;
 }
 
-export type Route = 'dashboard' | 'history' | 'log' | 'connection' | 'settings' | 'guide';
+export type Route = 'dashboard' | 'history' | 'log' | 'connection' | 'settings';
 
 export const AppContext = createContext<AppCtx | null>(null);
 

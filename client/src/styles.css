@@ -163,9 +163,7 @@ main { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
 .export-panel h2 { margin-bottom: 12px; }
 
 /* Login */
-.login-page { display: flex; flex-wrap: wrap; gap: 40px; align-items: center; align-content: center; justify-content: center; min-height: 100vh; padding: 32px 16px; }
-.login-video { flex: 1 1 560px; max-width: 900px; }
-.login-video video { width: 100%; aspect-ratio: 16 / 9; display: block; background: #000; border-radius: 12px; border: 1px solid #1a2840; }
+.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 16px; }
 .login-wrap { flex: 0 1 380px; max-width: 400px; position: relative; isolation: isolate; padding-top: 420px; }
 .login-wrap .brand-mark { display: none; }
 /* The station keeper, fading out of the dark behind the sign-in card */
@@ -205,6 +203,6 @@ main { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
   .big b { font-size: 34px; }
 }
 
-/* Guide */
+/* Getting-started video on the dashboard */
+.guide-panel { max-width: 960px; width: 100%; margin: 0 auto; }
 .guide-video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; border: 1px solid #1a2840; display: block; }
-.guide a, .login-wrap a { color: #7dd3fc; }

@@ -136,6 +136,11 @@ export function Dashboard() {
         {profile?.solarInstalled && <StatCard title="Solar radiation" value={fmt(latestM?.solarWm2, 0)} unit="W/m²" lines={['External solar sensor']} />}
         {latestM?.supplyV != null && <StatCard title="Supply voltage" value={fmt(latestM.supplyV, 1)} unit="V" lines={['Instrument power supply (health reading)']} />}
       </div>
+      <section className="panel guide-panel">
+        <h2>Getting started video</h2>
+        <video className="guide-video" src="/videos/getting-started.mp4" poster="/videos/getting-started.jpg" controls preload="metadata" playsInline />
+        <p className="fine">2½ minutes with captions. Dashboard scenes use demo mode; history and log scenes use simulated readings, labelled on screen.</p>
+      </section>
       <p className="fine center">
         Times shown in {tz}. {demo ? 'Demo readings are simulated and never saved.' : `Readings are timestamped by the capture browser when received.`}
       </p>

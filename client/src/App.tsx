@@ -8,7 +8,6 @@ import { AppContext, type Route } from './lib/context';
 import { useCapture, useNow, usePoll } from './lib/hooks';
 import { Connection } from './pages/Connection';
 import { Dashboard } from './pages/Dashboard';
-import { Guide } from './pages/Guide';
 import { History } from './pages/History';
 import { Log } from './pages/Log';
 import { Login } from './pages/Login';
@@ -21,7 +20,6 @@ const ROUTES: { id: Route; label: string }[] = [
   { id: 'log', label: 'Log' },
   { id: 'connection', label: 'Connection' },
   { id: 'settings', label: 'Settings' },
-  { id: 'guide', label: 'Guide' },
 ];
 
 function routeFromHash(): Route {
@@ -112,7 +110,7 @@ export function App() {
             <p>It differs from the server by about {Math.round(Math.abs(skew) / 1000)} s. Readings are timestamped by this browser, so set the clock to update automatically (Windows: Settings → Time &amp; language → Set time automatically).</p>
           </Banner>
         )}
-        {!settings.station.setupComplete && cap.mode !== 'demo' && route !== 'guide' ? <Setup /> : <Page route={route} onSignOut={() => void signOut()} />}
+        {!settings.station.setupComplete && cap.mode !== 'demo' ? <Setup /> : <Page route={route} onSignOut={() => void signOut()} />}
       </Shell>
     </AppContext.Provider>
   );
@@ -124,7 +122,6 @@ function Page({ route, onSignOut }: { route: Route; onSignOut: () => void }) {
     case 'log': return <Log />;
     case 'connection': return <Connection />;
     case 'settings': return <Settings onSignOut={onSignOut} />;
-    case 'guide': return <Guide />;
     default: return <Dashboard />;
   }
 }

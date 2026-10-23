@@ -1,7 +1,6 @@
 import { Banner, BlockStack, Button, Card, Form, FormLayout, Text, TextField } from '@shopify/polaris';
 import { useState } from 'react';
 import { api, ApiError } from '../lib/api';
-import { GUIDE_VIDEO } from './Guide';
 
 export function Login({ onSignedIn, pendingNote }: { onSignedIn: () => void; pendingNote?: string | null }) {
   const [password, setPassword] = useState('');
@@ -24,10 +23,6 @@ export function Login({ onSignedIn, pendingNote }: { onSignedIn: () => void; pen
 
   return (
     <div className="login-page">
-      <section className="login-video">
-        <video src={GUIDE_VIDEO} poster="/videos/getting-started.jpg" controls preload="metadata" playsInline />
-        <p className="fine">Getting started, 2½ minutes with captions. Dashboard scenes use demo mode; history and log scenes use simulated readings, labelled on screen.</p>
-      </section>
       <div className="login-wrap">
         <div className="login-portrait" aria-hidden="true" />
         <div className="brand-mark" aria-hidden="true">
