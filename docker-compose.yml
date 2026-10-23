@@ -1,0 +1,18 @@
+# Docker deployment with a persistent SQLite volume. Put an HTTPS reverse proxy in front
+# (see deploy/nginx-standalone.conf); the app itself only listens on localhost:3000 here.
+services:
+  aio2-console:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DATA_DIR: /data
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - aio2-data:/data
+
+volumes:
+  aio2-data:

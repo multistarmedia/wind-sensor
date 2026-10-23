@@ -1,0 +1,24 @@
+# systemd unit for a direct (non-Forge, non-Docker) deployment.
+#   sudo cp deploy/aio2-console.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now aio2-console
+[Unit]
+Description=AIO 2 Weather Console
+After=network.target
+
+[Service]
+Type=simple
+User=aio2
+WorkingDirectory=/opt/aio2-console
+ExecStart=/usr/bin/node dist/server/index.mjs
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+# .env in WorkingDirectory is loaded by the app; keep it chmod 600.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/aio2-console
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

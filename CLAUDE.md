@@ -26,10 +26,10 @@ Web app that reads a Met One AIO 2 weather instrument over **browser Web Serial*
 ## Suggested layout
 
 ```
-client/        React app (serial adapter, parser, queue, UI)
+client/        React + Polaris app (Web Serial adapter, simulator, IndexedDB queue, UI)
 server/        Express API, migrations, aggregation, export
 shared/        Record parser, checksum, profile types, unit conversion (used by both sides)
-deploy/        Dockerfile, docker-compose.yml, nginx example, systemd unit
+deploy/        Forge deploy script, nginx configs, systemd unit (Dockerfile at root)
 docs/SPEC.md   Specification
 ```
 
@@ -46,12 +46,12 @@ The parser/checksum lives in `shared/` so client and server validate identically
 
 - Hosted on Laravel Forge at https://wind-sensor.on-forge.com/, behind Cloudflare.
 - **Pushing to `main` deploys to production.** Keep `main` deployable; do work on branches and merge when it builds.
-- Forge nginx should reverse-proxy all traffic to the Node process (a Forge daemon running the built server). Express serves the built client and sets security headers (CSP, `Permissions-Policy: serial=(self)`), so the app has one origin.
-- Do not point the nginx web root at the repo root. Repo files (`docs/`, `server/`, `.env`) must never be served as static files.
-- SQLite lives outside the repo checkout (for example `/home/forge/wind-sensor-data/`), so deploys and `git pull` never touch it. Set the path with an env var.
-- The Forge deploy script must run `npm ci`, build, run migrations, and restart the daemon.
-- Cloudflare injects its own scripts (`/cdn-cgi/challenge-platform/...`). Either allow them in the CSP or turn off the Cloudflare features that inject them. Never weaken the CSP for anything else.
+- Forge nginx (`deploy/nginx-forge.conf`) proxies everything to Node on `127.0.0.1:3100` (`PORT` in `.env`). Express serves `dist/client` and sets all security headers; don't add them in nginx.
+- A Forge daemon (supervisor) runs `node dist/server/index.mjs`. `deploy/forge-deploy.sh` builds, runs tests, backs up, migrates, then restarts by SIGTERM via `$DATA_DIR/server.pid`.
+- `DATA_DIR=/home/forge/wind-sensor-data` (outside the checkout). Never move the database into the repo directory.
+- Cloudflare (on-forge.com zone) injects a challenge script; the strict CSP blocks it. That's harmless console noise. Don't weaken `script-src` for it.
+- Verified vs. unverified behaviour is tracked in `docs/VERIFICATION.md`; update it when hardware results come in.
 
 ## Hardware status
 
-No real AIO 2 record has been captured yet. All verification is simulated until one is. Report simulated results separately from hardware results (spec §15).
+No real AIO 2 record has been captured yet. None of the manual's example lines satisfy its own checksum rule (see docs/VERIFICATION.md), so the first real line is the key test. Report simulated results separately from hardware results (spec §15).
