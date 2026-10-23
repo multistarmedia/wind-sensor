@@ -42,6 +42,16 @@ The parser/checksum lives in `shared/` so client and server validate identically
 3. Client: serial adapter + simulator, IndexedDB queue/uploader, setup wizard, dashboard, history, diagnostics.
 4. Deployment files, README (owner setup + end-user connection guide), verified/unverified list.
 
+## Deployment target
+
+- Hosted on Laravel Forge at https://wind-sensor.on-forge.com/, behind Cloudflare.
+- **Pushing to `main` deploys to production.** Keep `main` deployable; do work on branches and merge when it builds.
+- Forge nginx should reverse-proxy all traffic to the Node process (a Forge daemon running the built server). Express serves the built client and sets security headers (CSP, `Permissions-Policy: serial=(self)`), so the app has one origin.
+- Do not point the nginx web root at the repo root. Repo files (`docs/`, `server/`, `.env`) must never be served as static files.
+- SQLite lives outside the repo checkout (for example `/home/forge/wind-sensor-data/`), so deploys and `git pull` never touch it. Set the path with an env var.
+- The Forge deploy script must run `npm ci`, build, run migrations, and restart the daemon.
+- Cloudflare injects its own scripts (`/cdn-cgi/challenge-platform/...`). Either allow them in the CSP or turn off the Cloudflare features that inject them. Never weaken the CSP for anything else.
+
 ## Hardware status
 
 No real AIO 2 record has been captured yet. All verification is simulated until one is. Report simulated results separately from hardware results (spec §15).
