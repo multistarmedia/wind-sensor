@@ -166,7 +166,29 @@ main { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
 .login-page { display: flex; flex-wrap: wrap; gap: 40px; align-items: center; align-content: center; justify-content: center; min-height: 100vh; padding: 32px 16px; }
 .login-video { flex: 1 1 560px; max-width: 900px; }
 .login-video video { width: 100%; aspect-ratio: 16 / 9; display: block; background: #000; border-radius: 12px; border: 1px solid #1a2840; }
-.login-wrap { flex: 0 1 380px; max-width: 400px; }
+.login-wrap { flex: 0 1 380px; max-width: 400px; position: relative; isolation: isolate; padding-top: 420px; }
+.login-wrap .brand-mark { display: none; }
+/* The station keeper, fading out of the dark behind the sign-in card */
+.login-portrait {
+  position: absolute; z-index: -1; left: 50%; top: -30px; width: 520px; height: 560px; transform: translateX(-50%);
+  background: url('/brand/station-portrait.jpg') center 30% / cover no-repeat;
+  filter: saturate(0.85) contrast(1.08) brightness(0.9);
+  -webkit-mask-image: radial-gradient(ellipse 48% 52% at 50% 46%, #000 45%, rgba(0, 0, 0, 0.5) 66%, transparent 84%);
+  mask-image: radial-gradient(ellipse 48% 52% at 50% 46%, #000 45%, rgba(0, 0, 0, 0.5) 66%, transparent 84%);
+  opacity: 0.9; pointer-events: none;
+}
+/* A cool blue wash so the warm hat glows against the console's navy */
+.login-portrait::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 55% at 50% 35%, transparent 35%, rgba(7, 13, 26, 0.85) 80%), linear-gradient(180deg, rgba(14, 165, 233, 0.08), rgba(7, 13, 26, 0.75) 78%);
+  mix-blend-mode: multiply;
+}
+.login-wrap .brand-mark, .login-wrap .login-title { position: relative; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9); }
+.login-wrap .brand-mark svg { filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.9)); }
+@media (max-width: 640px) {
+  .login-wrap { padding-top: 330px; }
+  .login-portrait { width: 400px; height: 430px; }
+}
 .brand-mark svg { width: 56px; height: 56px; display: block; margin: 0 auto 10px; }
 .login-title { text-align: center; font-size: 22px; margin: 0 0 18px; }
 
