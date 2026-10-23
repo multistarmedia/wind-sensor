@@ -1,0 +1,96 @@
+{
+  "s00-title": {
+    "text": "Your AIO 2 sends a line of numbers every second. Here's how to turn it into a live weather station you can read at a glance.",
+    "card": {
+      "kicker": "GETTING STARTED",
+      "title": "Your wind sensor, live",
+      "subtitle": "Wind, weather and logging for the Met One AIO 2.",
+      "chips": ["Live wind rose", "Temperature · humidity · pressure", "Logging and CSV"],
+      "url": "wind-sensor.on-forge.com",
+      "fine": ""
+    }
+  },
+  "s01-how": {
+    "text": "The computer wired to the sensor reads it in Chrome or Edge, and saves every reading. Then any phone or computer can watch.",
+    "card": {
+      "kicker": "HOW IT WORKS",
+      "title": "Sensor, computer, anywhere",
+      "subtitle": "The sensor computer reads the port in Chrome or Edge. Every reading is saved online.",
+      "chips": ["AIO 2 on a COM port", "Chrome or Edge on that PC", "Any phone or computer"],
+      "url": "",
+      "fine": ""
+    }
+  },
+  "s02-signin": {
+    "text": "On the sensor computer, open wind sensor dot on forge dot com, and sign in with the station password.",
+    "caption": "On the sensor computer, open wind-sensor.on-forge.com, and sign in with the station password."
+  },
+  "s03-station": {
+    "text": "The first time, name your station, and check its time zone. Today's highs and lows follow it."
+  },
+  "s04-output": {
+    "text": "Next, the instrument's output. The factory settings are already filled in. Check they match your sensor, tick the box, and save."
+  },
+  "s05-connection": {
+    "text": "This is the Connection page. The port is set to ninety-six hundred baud, the sensor's default. The console only listens. It never changes your sensor's settings.",
+    "caption": "This is the Connection page. The port is set to 9600 baud, the sensor's default. The console only listens. It never changes your sensor's settings."
+  },
+  "s06-connect": {
+    "text": "With the sensor plugged in, click Connect instrument. Chrome shows a list of ports. Pick the one the sensor is on, like COM two.",
+    "caption": "With the sensor plugged in, click Connect instrument. Chrome shows a list of ports. Pick the one the sensor is on, like COM2."
+  },
+  "s07-port": {
+    "text": "Not sure which port? Open Device Manager, and look under Ports. And close any other program using it first, like Comet.",
+    "card": {
+      "kicker": "WHICH PORT?",
+      "title": "Device Manager, then Ports",
+      "subtitle": "Unplug the sensor's cable and watch which entry disappears. Only one program can use a port at a time.",
+      "chips": ["Ports (COM & LPT)", "e.g. COM2", "Close Comet first"],
+      "url": "",
+      "fine": ""
+    }
+  },
+  "s08-demo": {
+    "text": "No sensor connected right now? Start the demo. It's clearly marked, and nothing it shows is saved."
+  },
+  "s09-dial": {
+    "text": "This is the wind dial. The arrow points from where the wind is coming from. It glides between readings, and the dots around the edge fade over a minute."
+  },
+  "s10-rose": {
+    "text": "Behind it is the wind rose. Each petal shows how often the wind came from that direction, colored by strength. Blue is light air. Red is storm force."
+  },
+  "s11-detail": {
+    "text": "On the right, the ten-minute average, the peak reading, and today's peak.",
+    "caption": "On the right, the 10-minute average, the peak reading, and today's peak."
+  },
+  "s12-cards": {
+    "text": "Below, temperature with today's high and low, humidity, and pressure, each with its trend for the last hour."
+  },
+  "s13-status": {
+    "text": "The status strip along the top shows what's happening. If the internet drops, readings wait in the browser, and upload on their own."
+  },
+  "s14-history": {
+    "text": "History charts any range, up to a month at a time. These readings are simulated for this video. A gap means nothing was saved, so an outage is never hidden."
+  },
+  "s15-log": {
+    "text": "The log lists every reading, newest first, with the raw line from the sensor."
+  },
+  "s16-export": {
+    "text": "To keep a copy, pick the days, and download a spreadsheet file."
+  },
+  "s17-phone": {
+    "text": "On your phone, open the same address and sign in. You'll see the same readings, from anywhere.",
+    "card": { "label": "ON YOUR PHONE", "caption": "Same address. [Same readings]." }
+  },
+  "s18-outro": {
+    "text": "Leave the browser open on the sensor computer, and keep it awake. It logs every second, for as long as it runs.",
+    "card": {
+      "kicker": "",
+      "title": "Keep the tab open",
+      "subtitle": "It logs every second while the sensor computer is on and awake.",
+      "chips": [],
+      "url": "wind-sensor.on-forge.com",
+      "fine": ""
+    }
+  }
+}

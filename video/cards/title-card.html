@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AIO 2 Weather Console title card</title>
+<!--
+  Narrated-video card: intro / chapter / outro. Self-contained (inline SVG, system fonts, no network) so
+  Playwright records it offline over file://. Fixed 1920×1080 stage.
+  Look: the console's dark instrument panel (navy #070d1a, sky #38bdf8) with the compass mark.
+
+  Config is URL-encoded JSON in the location hash:  title-card.html#%7B...%7D
+    {
+      "kicker":   "GETTING STARTED",  // pill above the title ("" hides)
+      "title":    "AIO 2 Weather Console",
+      "subtitle": "One sentence under the title",
+      "chips":    ["Live wind rose"], // [] hides the row
+      "url":      "",                 // bottom pill ("" hides)
+      "fine":     "",                 // small line under the chips ("" hides)
+      "dark":     false,              // true → closing card (centred, accent subtitle)
+      "duration": 10,                 // seconds; entrances are fractions of it
+      "still":    false,              // true → settled final frame
+      "loop":     false               // true → restart forever (preview)
+    }
+  Open with no hash to preview a looping default.
+-->
+<style>
+  :root { --bg:#070d1a; --panel:#0f1a2e; --ink:#f1f5f9; --muted:#94a3b8; --sky:#38bdf8; --hair:#1e2b42; }
+  html, body { margin:0; width:1920px; height:1080px; overflow:hidden; background:var(--bg); }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif; color:var(--ink); }
+  .stage { position:relative; width:1920px; height:1080px;
+    background:radial-gradient(110% 90% at 85% 20%, #13213b 0%, #0a1324 45%, #050a14 100%); }
+  .band { position:absolute; inset:0 0 auto 0; height:12px; background:linear-gradient(90deg,#3b82f6,#06b6d4,#22c55e,#eab308,#f97316,#ef4444,#a21caf); transform:scaleX(0); transform-origin:left; }
+  .band.in { transform:none; transition:transform 1.2s cubic-bezier(.22,1,.36,1); }
+  .brand { position:absolute; left:160px; top:170px; display:flex; align-items:center; gap:22px; opacity:0; transform:translateY(18px); }
+  .mark { width:78px; height:78px; flex:none; }
+  .word { font-size:44px; font-weight:800; letter-spacing:-1px; color:#cbd5e1; }
+  .word b { color:var(--sky); }
+  .kicker { position:absolute; left:160px; top:330px; display:inline-block; padding:10px 22px; border-radius:999px;
+    background:var(--sky); color:#04111f; font-weight:800; font-size:22px; letter-spacing:3px; opacity:0; transform:scale(.9); }
+  .title { position:absolute; left:160px; top:395px; width:1050px; font-size:92px; font-weight:800; line-height:1.04; letter-spacing:-2.5px; opacity:0; transform:translateY(26px); }
+  .subtitle { position:absolute; left:160px; top:640px; width:1000px; font-size:38px; line-height:1.3; color:var(--muted); opacity:0; }
+  .chips { position:absolute; left:160px; top:790px; display:flex; gap:16px; flex-wrap:wrap; width:1100px; }
+  .chip { padding:13px 24px; border-radius:10px; background:var(--panel); border:1px solid var(--hair); font-size:27px; color:var(--sky); font-weight:650;
+    opacity:0; transform:translateY(14px); }
+  .fine { position:absolute; left:160px; top:900px; font-size:26px; color:#64748b; opacity:0; }
+  .url { position:absolute; right:160px; bottom:80px; padding:14px 28px; border-radius:999px; background:#0b1424; border:1px solid #1e3354;
+    color:var(--sky); font-size:28px; font-family:"SF Mono",Menlo,Consolas,monospace; opacity:0; }
+  /* The dial: a rose with Beaufort-coloured petals and a needle, slowly turning */
+  .dial { position:absolute; right:150px; top:210px; width:620px; height:620px; opacity:0; transform:scale(.9); }
+  .needle { transform-origin:200px 200px; animation:sway 7s ease-in-out infinite; }
+  @keyframes sway { 0%,100% { transform:rotate(250deg) } 50% { transform:rotate(275deg) } }
+  .in { opacity:1 !important; transform:none !important; transition:opacity .7s ease, transform .9s cubic-bezier(.22,1,.36,1); }
+  .dial.in { transition:opacity 1s ease, transform 1.4s cubic-bezier(.22,1,.36,1); }
+
+  /* Closing card: centred */
+  body.dark .brand { left:0; right:0; justify-content:center; top:250px; }
+  body.dark .kicker { display:none !important; }
+  body.dark .title { left:0; right:0; width:auto; text-align:center; top:390px; }
+  body.dark .subtitle { left:50%; width:auto; max-width:1300px; transform:translate(-50%, 20px); top:560px; text-align:center; padding:18px 34px; border-radius:14px;
+    background:var(--sky); color:#04111f; font-weight:750; font-size:36px; }
+  body.dark .subtitle.in { transform:translate(-50%,0) !important; }
+  body.dark .chips { left:0; right:0; width:auto; justify-content:center; top:720px; }
+  body.dark .url { right:auto; left:50%; transform:translateX(-50%); bottom:150px; }
+  body.dark .url.in { transform:translateX(-50%) !important; }
+  body.dark .dial { display:none; }
+  body.dark .stage { background:radial-gradient(90% 80% at 50% 30%, #13213b 0%, #070d1a 60%, #03060c 100%); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="band" id="band"></div>
+  <div class="brand" id="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="#38bdf8" stroke-width="2"/><path d="M16 4 L20 17 L16 14 L12 17 Z" fill="#38bdf8"/></svg>
+    <div class="word">AIO 2 <b>Weather Console</b></div>
+  </div>
+  <svg class="dial" id="dial" viewBox="0 0 400 400" aria-hidden="true">
+    <circle cx="200" cy="200" r="194" fill="#070d1a" stroke="#1e293b" stroke-width="2"/>
+    <g fill="none" stroke="#1e3354" stroke-dasharray="2 4"><circle cx="200" cy="200" r="72"/><circle cx="200" cy="200" r="98"/><circle cx="200" cy="200" r="124"/><circle cx="200" cy="200" r="150"/></g>
+    <g id="petals"></g>
+    <g fill="#94a3b8" font-size="15" font-weight="800" text-anchor="middle" font-family="-apple-system,Helvetica,Arial">
+      <text x="200" y="22">N</text><text x="380" y="205">E</text><text x="200" y="392">S</text><text x="20" y="205">W</text>
+    </g>
+    <g class="needle"><line x1="200" y1="30" x2="200" y2="148" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/><path d="M200,156 L211,134 L189,134 Z" fill="#22c55e"/><circle cx="200" cy="30" r="8" fill="#070d1a" stroke="#22c55e" stroke-width="3"/></g>
+    <circle cx="200" cy="200" r="42" fill="#070d1a" stroke="#1e3354"/>
+  </svg>
+  <div class="kicker" id="kicker"></div>
+  <div class="title" id="title"></div>
+  <div class="subtitle" id="subtitle"></div>
+  <div class="chips" id="chips"></div>
+  <div class="fine" id="fine"></div>
+  <div class="url" id="url"></div>
+</div>
+<script>
+  const DEFAULTS = { kicker: "GETTING STARTED", title: "AIO 2 Weather Console", subtitle: "Live wind, weather and logging.", chips: ["Live wind rose", "Logging"],
+    url: "", fine: "", dark: false, duration: 10, still: false, loop: !location.hash };
+  let cfg = { ...DEFAULTS };
+  try { if (location.hash.length > 1) cfg = { ...DEFAULTS, ...JSON.parse(decodeURIComponent(location.hash.slice(1))) }; } catch {}
+  const $ = (id) => document.getElementById(id);
+  if (cfg.dark) document.body.classList.add("dark");
+  $("kicker").textContent = cfg.kicker || ""; $("kicker").style.display = cfg.kicker ? "inline-block" : "none";
+  $("title").textContent = cfg.title || "";
+  $("subtitle").textContent = cfg.subtitle || ""; $("subtitle").style.display = cfg.subtitle ? "block" : "none";
+  $("fine").textContent = cfg.fine || "";
+  $("url").textContent = cfg.url || ""; $("url").style.display = cfg.url ? "block" : "none";
+  (cfg.chips || []).forEach((c) => { const el = document.createElement("div"); el.className = "chip"; el.textContent = c; $("chips").appendChild(el); });
+  const chipEls = [...$("chips").children];
+
+  // A static illustrative rose for the card (decoration, not data).
+  const colors = ["#3b82f6", "#06b6d4", "#14b8a6", "#22c55e", "#84cc16", "#eab308", "#f97316"];
+  const shape = [0.15, 0.1, 0.08, 0.06, 0.05, 0.08, 0.14, 0.3, 0.55, 0.8, 1, 0.85, 0.6, 0.4, 0.25, 0.18];
+  const pt = (d, r) => [200 + r * Math.sin(d * Math.PI / 180), 200 - r * Math.cos(d * Math.PI / 180)];
+  const wedge = (c, r0, r1) => { const [a, b] = pt(c - 9, r0), [e, f] = pt(c - 9, r1), [g, h] = pt(c + 9, r1), [i, j] = pt(c + 9, r0);
+    return `M${a},${b} L${e},${f} A${r1},${r1} 0 0 1 ${g},${h} L${i},${j} A${r0},${r0} 0 0 0 ${a},${b} Z`; };
+  shape.forEach((s, k) => {
+    let r = 46; const total = 46 + s * 120, bands = Math.max(1, Math.round(s * 6));
+    for (let b = 0; b < bands; b++) {
+      const r1 = r + (total - 46) / bands;
+      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p.setAttribute("d", wedge(k * 22.5, r, r1)); p.setAttribute("fill", colors[b]); p.setAttribute("fill-opacity", ".85");
+      p.setAttribute("stroke", "#070d1a"); p.setAttribute("stroke-width", ".6");
+      $("petals").appendChild(p); r = r1;
+    }
+  });
+
+  const steps = [
+    [0.0, () => $("band").classList.add("in")],
+    [0.04, () => $("brand").classList.add("in")],
+    [0.10, () => $("kicker").classList.add("in")],
+    [0.16, () => $("title").classList.add("in")],
+    [0.22, () => $("dial").classList.add("in")],
+    [0.28, () => $("subtitle").classList.add("in")],
+    ...chipEls.map((el, i) => [0.36 + (0.16 * i) / Math.max(1, chipEls.length - 1), () => el.classList.add("in")]),
+    [0.50, () => $("fine").classList.add("in")],
+    [0.56, () => $("url").classList.add("in")],
+  ];
+  function reset() { document.querySelectorAll(".in").forEach((e) => e.classList.remove("in")); }
+  function run() {
+    reset();
+    const ms = Math.max(2, Number(cfg.duration) || 10) * 1000;
+    if (cfg.still) { steps.forEach(([, fn]) => fn()); return; }
+    steps.forEach(([at, fn]) => setTimeout(fn, at * ms));
+    if (cfg.loop) setTimeout(run, ms + 1500);
+  }
+  run();
+</script>
+</body>
+</html>

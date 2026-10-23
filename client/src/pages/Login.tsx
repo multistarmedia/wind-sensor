@@ -36,6 +36,7 @@ export function Login({ onSignedIn, pendingNote }: { onSignedIn: () => void; pen
             <BlockStack gap="200">
               <Button submit variant="primary" loading={busy} disabled={!password}>Sign in</Button>
               <Text as="p" variant="bodySm" tone="subdued">One shared owner password per station. Ask the station owner if you don’t have it.</Text>
+              <Text as="p" variant="bodySm"><a href="/videos/getting-started.mp4" target="_blank" rel="noreferrer">Watch the getting-started video</a></Text>
             </BlockStack>
           </FormLayout>
         </Form>

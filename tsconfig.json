@@ -15,5 +15,5 @@
     "verbatimModuleSyntax": true,
     "types": ["node", "w3c-web-serial"]
   },
-  "include": ["shared", "server", "client/src", "tests", "vite.config.ts"]
+  "include": ["shared", "server", "client/src", "tests", "video", "vite.config.ts"]
 }

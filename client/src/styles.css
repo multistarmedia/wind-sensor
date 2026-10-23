@@ -179,3 +179,7 @@ main { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
   .wind-caption { font-size: 17px; }
   .big b { font-size: 34px; }
 }
+
+/* Guide */
+.guide-video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; border: 1px solid #1a2840; display: block; }
+.guide a, .login-wrap a { color: #7dd3fc; }
