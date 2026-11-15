@@ -111,6 +111,6 @@ function ensureStation(db: DB, retentionDays: number) {
   const now = Date.now();
   db.prepare(
     `INSERT OR IGNORE INTO station (id, name, time_zone, display_units, retention_days, setup_complete, created_at, updated_at)
-     VALUES (?, 'Weather station', 'UTC', ?, ?, 0, ?, ?)`,
+     VALUES (?, 'AIO 3 Weather Station', 'UTC', ?, ?, 0, ?, ?)`,
   ).run(STATION_ID, JSON.stringify(DEFAULT_DISPLAY_UNITS), retentionDays, now, now);
 }

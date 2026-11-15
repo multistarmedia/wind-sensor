@@ -7,7 +7,7 @@ import type { Config } from './config';
 import type { DB } from './db';
 import { streamCsv } from './export';
 import { endCaptureSession, ingestBatch, IngestError, isUuid, upsertCaptureSession } from './ingest';
-import { diagnostics, history, log, parseRange, RangeError400, status, windRose } from './queries';
+import { diagnostics, history, log, parseRange, RangeError400, status, windRose, windStats } from './queries';
 import { getSettings, getStation, SettingsError, updateSettings } from './settings';
 
 const CSP = [
@@ -120,6 +120,11 @@ export function createApp(config: Config, db: DB) {
   api.get('/windrose', (req, res) => {
     const { from, to } = parseRange(req.query, Date.now(), 3600_000);
     res.json(windRose(db, from, to));
+  });
+
+  api.get('/wind-stats', (req, res) => {
+    const { from, to } = parseRange(req.query, Date.now(), 10 * 60_000);
+    res.json(windStats(db, from, to));
   });
 
   api.get('/log', (req, res) => res.json(log(db, req.query)));

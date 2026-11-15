@@ -219,6 +219,13 @@ describe('summaries and history', () => {
     expect(rose.total).toBe(3);
     expect(rose.calm).toBe(1);
     expect(rose.counts[0][2]).toBe(2); // north sector, Beaufort 3 (3.4–5.4 m/s)
+
+    const stats = (await agent.get(
+      `/api/wind-stats?from=${new Date(now - 60_000).toISOString()}&to=${new Date(now).toISOString()}`,
+    )).body;
+    expect(stats.samples).toBe(3);
+    expect(stats.peakSpeedMs).toBe(5);
+    expect(Math.min(stats.meanDirDeg, 360 - stats.meanDirDeg)).toBeLessThan(0.01);
   });
 });
 

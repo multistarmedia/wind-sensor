@@ -54,7 +54,14 @@ const RECENT_REAL = 900; // 15 min at 1 Hz, for the live dial and trail
 const RECENT_DEMO = 3600; // demo computes its own summaries locally
 
 /** Fixed profile used by demo mode; never stored on the server. */
-export const DEMO_PROFILE: ProfileSettings = { ...SUGGESTED_PROFILE, directionReference: 'magnetic', unitsConfirmed: true };
+export const DEMO_PROFILE: ProfileSettings = {
+  ...SUGGESTED_PROFILE,
+  directionReference: 'magnetic',
+  unitsConfirmed: true,
+  // Demo includes the optional accessories so those modules can be exercised without hardware.
+  rainGaugeInstalled: true,
+  solarInstalled: true,
+};
 
 export class CaptureController {
   readonly queue = new ObservationQueue();

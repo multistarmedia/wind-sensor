@@ -24,6 +24,7 @@ const ROUTES: { id: Route; label: string }[] = [
 
 function routeFromHash(): Route {
   const h = window.location.hash.replace(/^#\/?/, '');
+  // Former module hashes fall through to the Live console.
   return (ROUTES.find((r) => r.id === h)?.id ?? 'dashboard') as Route;
 }
 
@@ -136,7 +137,7 @@ function Shell({ route, navigate, name, children }: { route: Route; navigate: (r
       <header className="topbar">
         <div className="brand">
           <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="#38bdf8" strokeWidth="2" /><path d="M16 4 L20 17 L16 14 L12 17 Z" fill="#38bdf8" /></svg>
-          <span>{name}</span>
+          <span>{name === 'Weather station' || name === 'AIO3 Weather Station' ? 'AIO 3 Weather Station' : name}</span>
         </div>
         <nav aria-label="Main">
           {ROUTES.map((r) => (

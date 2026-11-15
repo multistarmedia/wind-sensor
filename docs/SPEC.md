@@ -10,7 +10,7 @@ The application will be uploaded to the owner's web server. The instrument belon
 
 ## 1. Product goal
 
-Turn the Met One Instruments AIO 2 weather instrument's serial output into a readable home-weather-station experience: live wind readings, an understandable compass, supporting measurements, history, and downloadable logs.
+Turn the Met One Instruments AIO 2 weather instrument's serial output into a readable weather console: a detailed wind module first, with separate modules for temperature, humidity, barometric pressure, rain, and solar, plus history and downloadable logs.
 
 The intended user can connect a serial instrument but should not need to interpret comma-separated records, configure a database, or run a terminal application to use the dashboard.
 
@@ -196,17 +196,21 @@ Avoid technical controls on the main dashboard. Keep raw output, field-layout op
 
 Use a calm, readable layout with strong type hierarchy, generous spacing, and restrained animation. Use Polaris components for controls, forms, navigation, banners, and dialogs. A custom SVG compass and charts are appropriate for the weather displays.
 
-### Live view
+### Live console (weather modules)
 
-| Element | Required behavior |
+One Live page holds every module in a browser-local, user-draggable and resizable grid. Wind is the visual centre by default (Suite mockup proportions). A Save layout control persists the current tile positions and sizes in this browser. Layout is not synced across devices.
+
+| Module | Required behavior |
 | --- | --- |
-| Primary wind card | Large speed, unit, compass, and text such as “Wind from W · 272°” |
-| Wind context | Last 10-minute average and last 10-minute peak, with windows stated |
-| Supporting cards | Temperature, humidity, pressure, and small recent trend charts |
-| Optional cards | Rain field and solar reading when installed; otherwise “Not installed” or hidden |
-| Daily context | Temperature high/low and peak wind for the station's calendar day |
+| Wind | Large speed, unit, compass, text such as “Wind from W · 272°”, selectable period (1 s–72 h) for average / peak / mean direction, wind rose, peak wind for the station’s calendar day |
+| Temperature | Live cyan readout, selectable time windows (1 h–10 d), thermal-gradient chart with scrub cursor, optional Hi/Lo badges, optional dew-point and feels-like overlays calculated from measured temperature, humidity, and wind. No forecast curve |
+| Relative humidity | Title “RELATIVE HUMIDITY”, live % RH readout, dry→moist colour bar (dusty brown to deep blue), trend chart |
+| Barometric pressure | Title “BAROMETRIC PRESSURE”; station-pressure dial and readout centred in the upper area; live history strip directly below; units and short ranges in the header; compact 3-hour tendency only. No session stat cards, sea-level correction, or pressure altitude |
+| Supply voltage | Instrument power supply in volts (health reading). Default layout sits under Wind, between Humidity and Rain. Never invent a battery percentage |
+| Rain gauge | Raw rain field when installed; otherwise a clear “not installed” state. No accumulation, rate, or daily rainfall until reset semantics are verified |
+| Solar | Live irradiance and trend chart when installed; otherwise a clear “not installed” state |
 | Connection strip | Capture status, server-saving status, last valid reading age, queue depth |
-| Actions | Connect/Disconnect, display units, history, export, and settings |
+| Actions | Connect/Disconnect, per-tile display units, history, export, settings, save layout |
 
 Additional requirements:
 

@@ -21,7 +21,7 @@ export const OUTLINE: VideoOutline = {
     { id: "s09-dial", kind: "live", silenceAfter: 0.6, steps: ["Let demo readings build (cut)", "Zoom on the dial"] },
     { id: "s10-rose", kind: "live", silenceAfter: 0.6, steps: ["Zoom on the colour legend"] },
     { id: "s11-detail", kind: "live", silenceAfter: 0.6, steps: ["Spotlight the wind detail panel"] },
-    { id: "s12-cards", kind: "live", silenceAfter: 0.6, steps: ["Glide to temperature, humidity and pressure"] },
+    { id: "s12-cards", kind: "live", silenceAfter: 0.6, steps: ["Spotlight temperature and pressure tiles on Live"] },
     { id: "s13-status", kind: "live", silenceAfter: 0.6, steps: ["Zoom on the status strip"] },
     { id: "s14-history", kind: "live", silenceAfter: 0.6, steps: ["Exit demo, seed simulated readings, phone capture (cut)", "Open History, 24 h", "Glide down the charts"] },
     { id: "s15-log", kind: "live", silenceAfter: 0.6, steps: ["Open Log", "Spotlight the newest rows"] },

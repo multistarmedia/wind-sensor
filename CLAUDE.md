@@ -1,6 +1,6 @@
 # AIO 2 Weather Console
 
-Web app that reads a Met One AIO 2 weather instrument over **browser Web Serial** on the user's PC, uploads validated records to a Node/SQLite backend, and shows a live dashboard, history, and CSV export.
+Web app that reads a Met One AIO 2 weather instrument over **browser Web Serial** on the user's PC, uploads validated records to a Node/SQLite backend, and shows a weather console (wind module plus temperature, humidity, pressure, rain, and solar modules), history, and CSV export.
 
 **`docs/SPEC.md` is the source of truth.** Read the relevant section before implementing or changing a feature. If something here conflicts with the spec, the spec wins.
 
@@ -34,6 +34,14 @@ docs/SPEC.md   Specification
 ```
 
 The parser/checksum lives in `shared/` so client and server validate identically (spec §5, §9).
+
+## Tests
+
+- `npm test` (Vitest) runs everything in `tests/**/*.test.ts(x)`; `npm run typecheck` covers `tests/` too. `deploy/forge-deploy.sh` runs `npm test` (not typecheck), so run both before merging to `main`.
+- Default environment is `node`. React/DOM tests (`.test.tsx`) opt in with a `// @vitest-environment jsdom` first line and use `@testing-library/react` (see `tests/context.test.tsx`).
+- IndexedDB tests use `fake-indexeddb` with a fresh `IDBFactory` per test (`tests/queue.test.ts`).
+- When asserting a render throws, silence React's dev error replay (spy on `console.error` and `preventDefault` the window `error` event) or the output fills with stack traces.
+- `video/record.spec.ts` is a Playwright script for the narrated video, not part of `npm test`.
 
 ## Build order
 

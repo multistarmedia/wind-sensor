@@ -26,7 +26,8 @@ export function rainToMm(v: number, unit: RainInputUnit): number {
 
 export const WIND_DISPLAY_UNITS = ['mph', 'm/s', 'km/h', 'kn'] as const;
 export const TEMP_DISPLAY_UNITS = ['F', 'C'] as const;
-export const PRESSURE_DISPLAY_UNITS = ['inHg', 'hPa', 'mmHg'] as const;
+/** Display options. mbar ≡ hPa numerically (1 mbar = 1 hPa); storage stays hPa. */
+export const PRESSURE_DISPLAY_UNITS = ['inHg', 'hPa', 'mbar', 'mmHg'] as const;
 export const RAIN_DISPLAY_UNITS = ['in', 'mm'] as const;
 
 export interface DisplayUnits {
@@ -66,6 +67,7 @@ export function cDeltaToDisplay(v: number, unit: DisplayUnits['temp']): number {
 export function hpaToDisplay(v: number, unit: DisplayUnits['pressure']): number {
   if (unit === 'inHg') return v / INHG_TO_HPA;
   if (unit === 'mmHg') return v / MMHG_TO_HPA;
+  // hPa and mbar share the same magnitude.
   return v;
 }
 export function mmToDisplay(v: number, unit: DisplayUnits['rain']): number {
@@ -73,5 +75,5 @@ export function mmToDisplay(v: number, unit: DisplayUnits['rain']): number {
 }
 
 export const WIND_DECIMALS: Record<DisplayUnits['wind'], number> = { mph: 1, 'm/s': 1, 'km/h': 0, kn: 1 };
-export const PRESSURE_DECIMALS: Record<DisplayUnits['pressure'], number> = { inHg: 2, hPa: 1, mmHg: 1 };
+export const PRESSURE_DECIMALS: Record<DisplayUnits['pressure'], number> = { inHg: 2, hPa: 1, mbar: 1, mmHg: 1 };
 export const TEMP_LABEL: Record<DisplayUnits['temp'], string> = { F: '°F', C: '°C' };
