@@ -1,5 +1,6 @@
 import type {
-  DiagnosticsResponse, HistoryPoint, HistoryResponse, LogResponse, LogRow, ObservationView, StatusResponse, WindRoseResponse,
+  DiagnosticsResponse, HistoryPoint, HistoryResponse, LogResponse, LogRow, ObservationView, StatusResponse,
+  WindRoseResponse, WindStatsResponse,
 } from '../shared/api';
 import { MAX_RANGE_MS } from '../shared/api';
 import { bucketSizeMs } from '../shared/buckets';
@@ -57,17 +58,7 @@ export function status(db: DB, now = Date.now()): StatusResponse {
   const ageMs = latestRow ? Math.max(0, now - latestRow.observed_at) : null;
 
   const tenAgo = now - 10 * 60_000;
-  const w = db.prepare(
-    `SELECT COUNT(*) n, AVG(ws) avg, MAX(ws) peak,
-            SUM(CASE WHEN ws >= @calm THEN sin(radians(wd)) END) s,
-            SUM(CASE WHEN ws >= @calm THEN cos(radians(wd)) END) c,
-            SUM(CASE WHEN ws >= @calm THEN 1 ELSE 0 END) nd
-     FROM observation WHERE station_id = @st AND observed_at >= @from AND observed_at <= @to`,
-  ).get({ st: STATION_ID, calm: CALM_THRESHOLD_MS, from: tenAgo, to: now }) as { n: number; avg: number | null; peak: number | null; s: number | null; c: number | null; nd: number | null };
-  const peakRow = w.n
-    ? (db.prepare('SELECT observed_at FROM observation WHERE station_id = ? AND observed_at >= ? AND observed_at <= ? ORDER BY ws DESC, observed_at DESC LIMIT 1')
-        .get(STATION_ID, tenAgo, now) as { observed_at: number })
-    : undefined;
+  const last10 = windStats(db, tenAgo, now);
 
   const dayStart = startOfZonedDay(station.timeZone, now);
   const extreme = (col: 'at' | 'ws', dir: 'ASC' | 'DESC') =>
@@ -96,11 +87,11 @@ export function status(db: DB, now = Date.now()): StatusResponse {
     freshness: { ageMs, stale: ageMs === null || ageMs > threshold, staleThresholdMs: threshold },
     capture: { active: hb.t !== null && now - hb.t < 30_000, lastHeartbeatAt: iso(hb.t) },
     last10min: {
-      samples: w.n,
-      avgSpeedMs: w.avg,
-      peakSpeedMs: w.peak,
-      peakAt: iso(peakRow?.observed_at),
-      meanDirDeg: meanDirectionFromSums(w.s ?? 0, w.c ?? 0, w.nd ?? 0),
+      samples: last10.samples,
+      avgSpeedMs: last10.avgSpeedMs,
+      peakSpeedMs: last10.peakSpeedMs,
+      peakAt: last10.peakAt,
+      meanDirDeg: last10.meanDirDeg,
     },
     today: {
       start: iso(dayStart)!,
@@ -111,6 +102,33 @@ export function status(db: DB, now = Date.now()): StatusResponse {
     },
     pressureTrend: { windowHours: 3, changeHpa: bpNow !== null && bpThen !== null ? bpNow - bpThen : null },
     recent,
+  };
+}
+
+/** Average / peak / vector-mean direction over an arbitrary observation window. */
+export function windStats(db: DB, from: number, to: number): WindStatsResponse {
+  const w = db.prepare(
+    `SELECT COUNT(*) n, AVG(ws) avg, MAX(ws) peak,
+            SUM(CASE WHEN ws >= @calm THEN sin(radians(wd)) END) s,
+            SUM(CASE WHEN ws >= @calm THEN cos(radians(wd)) END) c,
+            SUM(CASE WHEN ws >= @calm THEN 1 ELSE 0 END) nd
+     FROM observation WHERE station_id = @st AND observed_at >= @from AND observed_at <= @to`,
+  ).get({ st: STATION_ID, calm: CALM_THRESHOLD_MS, from, to }) as {
+    n: number; avg: number | null; peak: number | null; s: number | null; c: number | null; nd: number | null;
+  };
+  const peakRow = w.n
+    ? (db.prepare(
+      'SELECT observed_at FROM observation WHERE station_id = ? AND observed_at >= ? AND observed_at <= ? ORDER BY ws DESC, observed_at DESC LIMIT 1',
+    ).get(STATION_ID, from, to) as { observed_at: number })
+    : undefined;
+  return {
+    from: iso(from)!,
+    to: iso(to)!,
+    samples: w.n,
+    avgSpeedMs: w.avg,
+    peakSpeedMs: w.peak,
+    peakAt: iso(peakRow?.observed_at),
+    meanDirDeg: meanDirectionFromSums(w.s ?? 0, w.c ?? 0, w.nd ?? 0),
   };
 }
 

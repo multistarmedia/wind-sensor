@@ -2,21 +2,21 @@
 // and a needle that glides between 1-second readings while the previous position fades out.
 // The glide is display-only animation between two real readings; no values are invented.
 
-import { useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import type { WindPoint, WindRoseResponse } from '../../../shared/api';
 import type { DisplayUnits } from '../../../shared/units';
 import { WIND_DECIMALS, msToDisplay } from '../../../shared/units';
-import { beaufortForce, BEAUFORT_NAMES, CALM_THRESHOLD_MS, compassPoint, isCalm } from '../../../shared/wind';
+import { CALM_THRESHOLD_MS, compassPoint, isCalm } from '../../../shared/wind';
+import {
+  bandColor, DEFAULT_MAX_SPEED_MS, PALETTE_CLASSIC, paletteGradientCss, scaleTickLabels, windSpeedColor,
+} from '../../../shared/windColors';
 import { usePrefersReducedMotion } from '../lib/hooks';
 
-export const FORCE_COLORS = [
-  '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308',
-  '#f59e0b', '#f97316', '#ef4444', '#dc2626', '#db2777', '#a21caf',
-];
+/** @deprecated Prefer windSpeedColor with an explicit palette — kept for older call sites. */
+export const FORCE_COLORS = PALETTE_CLASSIC;
 
-export function forceColor(speedMs: number) {
-  const f = beaufortForce(speedMs);
-  return f === 0 ? '#94a3b8' : FORCE_COLORS[f - 1]!;
+export function forceColor(speedMs: number, palette: readonly string[] = PALETTE_CLASSIC, maxSpeedMs = DEFAULT_MAX_SPEED_MS) {
+  return windSpeedColor(speedMs, palette, maxSpeedMs);
 }
 
 const C = 200;
@@ -25,6 +25,8 @@ const R_ROSE = 150;
 const R_INNER = 46;
 const TRAIL_MS = 60_000;
 const GHOSTS = 4;
+/** Fixed needle/stream colour — deep aquamarine blue (not speed-scaled). */
+const NEEDLE_AQUA = '#067A96';
 
 const pt = (deg: number, r: number) => {
   const a = (deg * Math.PI) / 180;
@@ -43,6 +45,126 @@ function shortestDelta(from: number, to: number) {
   return ((((to - from) % 360) + 540) % 360) - 180;
 }
 
+/** Vertical sine shaft from rim (y0) toward hub (y1), in needle-local coords. */
+function wavyShaft(cx: number, y0: number, y1: number, amp: number, cycles: number, phase = 0, steps = 40): string {
+  let d = '';
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const y = y0 + (y1 - y0) * t;
+    const x = cx + Math.sin(t * cycles * Math.PI * 2 + phase) * amp;
+    d += `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
+  }
+  return d.trim();
+}
+
+const SHAFT_Y0 = C - R_OUTER + 14;
+const SHAFT_Y1 = C - R_INNER - 18;
+
+const WAVE_STREAMS = [
+  { amp: 5.5, cycles: 2.6, phase0: 0, width: 3.2, opacity: 0.9 },
+  { amp: 7, cycles: 2.85, phase0: 2.1, width: 2.2, opacity: 0.55 },
+  { amp: 4.2, cycles: 3.1, phase0: 4.0, width: 1.8, opacity: 0.45 },
+] as const;
+
+/**
+ * Wave-phase radians per second. Negative so crests travel rim → hub
+ * (wind comes from the outer rim toward the centre).
+ */
+const WAVE_PHASE_RATE = -1.35;
+
+/** Module-level phase clock — survives calm, new readings, and React remounts of the shaft. */
+let waveSharedPhase = 0;
+let waveSharedRaf = 0;
+let waveSharedLast = 0;
+const waveListeners = new Set<(phase: number) => void>();
+
+function ensureWaveClock() {
+  if (waveSharedRaf) return;
+  waveSharedLast = performance.now();
+  const tick = (now: number) => {
+    const dt = Math.min(0.05, (now - waveSharedLast) / 1000);
+    waveSharedLast = now;
+    waveSharedPhase += dt * WAVE_PHASE_RATE;
+    for (const fn of waveListeners) fn(waveSharedPhase);
+    waveSharedRaf = requestAnimationFrame(tick);
+  };
+  waveSharedRaf = requestAnimationFrame(tick);
+}
+
+function releaseWaveClock() {
+  if (waveListeners.size === 0 && waveSharedRaf) {
+    cancelAnimationFrame(waveSharedRaf);
+    waveSharedRaf = 0;
+  }
+}
+
+function subscribeWaveClock(fn: (phase: number) => void) {
+  waveListeners.add(fn);
+  fn(waveSharedPhase);
+  ensureWaveClock();
+  return () => {
+    waveListeners.delete(fn);
+    releaseWaveClock();
+  };
+}
+
+/**
+ * Solid wavy streams. Live shafts subscribe to the shared phase clock (independent of
+ * readings / calm). Ghosts are a frozen snapshot only.
+ */
+const WindShaftWaves = memo(function WindShaftWaves({
+  color,
+  ghost = false,
+}: {
+  color: string;
+  ghost?: boolean;
+}) {
+  const pathRefs = useRef<(SVGPathElement | null)[]>([]);
+  const streams = ghost
+    ? WAVE_STREAMS.map((s) => ({ ...s, width: s.width * 0.7, opacity: s.opacity * 0.6 }))
+    : WAVE_STREAMS;
+
+  const paint = (phase: number) => {
+    for (let i = 0; i < streams.length; i++) {
+      const el = pathRefs.current[i];
+      const s = streams[i];
+      if (!el || !s) continue;
+      el.setAttribute('d', wavyShaft(C, SHAFT_Y0, SHAFT_Y1, s.amp, s.cycles, s.phase0 + phase));
+    }
+  };
+
+  useEffect(() => {
+    // Ghosts: one static frame. Live: stay on the shared clock for the whole mount life.
+    if (ghost) {
+      paint(waveSharedPhase);
+      return;
+    }
+    return subscribeWaveClock(paint);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ghost]);
+
+  useEffect(() => {
+    for (const el of pathRefs.current) el?.setAttribute('stroke', color);
+  }, [color]);
+
+  return (
+    <g className="wind-shaft" filter={ghost ? undefined : 'url(#glow)'}>
+      {streams.map((s, i) => (
+        <path
+          key={i}
+          ref={(el) => { pathRefs.current[i] = el; }}
+          fill="none"
+          stroke={color}
+          strokeWidth={s.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={s.opacity}
+        />
+      ))}
+    </g>
+  );
+});
+
 interface Props {
   latest: WindPoint | null;
   trail: WindPoint[];
@@ -50,47 +172,92 @@ interface Props {
   units: DisplayUnits;
   stale: boolean;
   intervalMs: number;
+  /** Independent colour palette. */
+  palette?: readonly string[];
+  /** Speed (m/s) that maps to the top colour; stronger winds reuse it. */
+  maxSpeedMs?: number;
 }
 
-export function WindDial({ latest, trail, rose, units, stale, intervalMs }: Props) {
+export function WindDial({
+  latest, trail, rose, units, stale, intervalMs: _intervalMs,
+  palette = PALETTE_CLASSIC, maxSpeedMs = DEFAULT_MAX_SPEED_MS,
+}: Props) {
   const reduced = usePrefersReducedMotion();
   const needleRef = useRef<SVGGElement>(null);
   const speedRef = useRef<SVGTextElement>(null);
-  const anim = useRef({ angle: latest?.wd ?? 0, speed: latest?.ws ?? 0, fromAngle: 0, toAngle: 0, fromSpeed: 0, toSpeed: 0, start: 0, raf: 0 });
+  const anim = useRef({
+    angle: latest?.wd ?? 0,
+    speed: latest?.ws ?? 0,
+    targetAngle: latest?.wd ?? 0,
+    targetSpeed: latest?.ws ?? 0,
+  });
+  const latestRef = useRef(latest);
+  const calmRef = useRef(true);
+  const unitsRef = useRef(units);
+  const decimalsRef = useRef(WIND_DECIMALS[units.wind]);
 
   const calm = latest ? isCalm(latest.ws) : true;
   const decimals = WIND_DECIMALS[units.wind];
+  latestRef.current = latest;
+  calmRef.current = calm;
+  unitsRef.current = units;
+  decimalsRef.current = decimals;
 
-  // Glide needle and speed from the previous reading to the new one over ~one reading interval.
+  // New reading only retargets the chase — never stops or restarts the motion clock.
   useEffect(() => {
     if (!latest) return;
     const a = anim.current;
-    a.fromAngle = a.angle;
-    a.toAngle = a.angle + shortestDelta(a.angle, latest.wd);
-    a.fromSpeed = a.speed;
-    a.toSpeed = latest.ws;
-    a.start = performance.now();
-    const duration = reduced ? 0 : Math.min(1200, intervalMs * 0.9);
-    cancelAnimationFrame(a.raf);
-    const step = (now: number) => {
-      const p = duration === 0 ? 1 : Math.min(1, (now - a.start) / duration);
-      const e = 1 - (1 - p) ** 3; // ease-out
-      a.angle = a.fromAngle + (a.toAngle - a.fromAngle) * e;
-      a.speed = a.fromSpeed + (a.toSpeed - a.fromSpeed) * e;
+    a.angle = ((a.angle % 360) + 360) % 360;
+    a.targetAngle = a.angle + shortestDelta(a.angle, latest.wd);
+    a.targetSpeed = latest.ws;
+    if (reduced) {
+      a.angle = latest.wd;
+      a.speed = latest.ws;
+      a.targetAngle = latest.wd;
       needleRef.current?.setAttribute('transform', `rotate(${a.angle} ${C} ${C})`);
-      if (speedRef.current) speedRef.current.textContent = msToDisplay(a.speed, units.wind).toFixed(decimals);
-      if (p < 1) a.raf = requestAnimationFrame(step);
-      else a.angle = ((a.angle % 360) + 360) % 360;
+      if (speedRef.current) {
+        speedRef.current.textContent = msToDisplay(a.speed, units.wind).toFixed(decimals);
+      }
+    }
+  }, [latest?.t, latest?.wd, latest?.ws, reduced, units.wind, decimals]);
+
+  // Persistent soft-chase loop: keeps easing forever so there is no pause between samples.
+  useEffect(() => {
+    if (reduced) return;
+    let raf = 0;
+    let last = performance.now();
+    /** Larger = softer / slower catch-up toward each new reading. */
+    const tau = 1.1;
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const a = anim.current;
+      if (latestRef.current && !calmRef.current) {
+        const k = 1 - Math.exp(-dt / tau);
+        a.angle += (a.targetAngle - a.angle) * k;
+        a.speed += (a.targetSpeed - a.speed) * k;
+        if (Math.abs(a.targetAngle - a.angle) < 0.02) {
+          a.angle = ((a.targetAngle % 360) + 360) % 360;
+          a.targetAngle = a.angle;
+        }
+        needleRef.current?.setAttribute('transform', `rotate(${a.angle} ${C} ${C})`);
+        if (speedRef.current) {
+          speedRef.current.textContent = msToDisplay(a.speed, unitsRef.current.wind).toFixed(decimalsRef.current);
+        }
+      }
+      raf = requestAnimationFrame(step);
     };
-    a.raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(a.raf);
-  }, [latest?.t, latest?.wd, latest?.ws, reduced, intervalMs, units.wind, decimals]);
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
 
   const petals = useMemo(() => {
     if (!rose || rose.total === 0) return { paths: [] as { d: string; color: string }[], max: 0 };
     const sectorTotals = rose.counts.map((s) => s.reduce((a, b) => a + b, 0));
     const max = Math.max(...sectorTotals);
     if (max === 0) return { paths: [], max: 0 };
+    // 16 sectors × 22.5°. Keep ~25% of the old inter-bar gap (was 4.5° → ~1.1°).
+    const halfWidth = (22.5 - 4.5 * 0.25) / 2;
     const paths: { d: string; color: string }[] = [];
     rose.counts.forEach((bins, i) => {
       let cum = 0;
@@ -99,11 +266,11 @@ export function WindDial({ latest, trail, rose, units, stale, intervalMs }: Prop
         const r0 = R_INNER + (cum / max) * (R_ROSE - R_INNER);
         cum += n;
         const r1 = R_INNER + (cum / max) * (R_ROSE - R_INNER);
-        paths.push({ d: wedge(i * 22.5, 9, r0, r1), color: FORCE_COLORS[f]! });
+        paths.push({ d: wedge(i * 22.5, halfWidth, r0, r1), color: bandColor(f, palette, maxSpeedMs) });
       });
     });
     return { paths, max: max / rose.total };
-  }, [rose]);
+  }, [rose, palette, maxSpeedMs]);
 
   const now = latest?.t ?? Date.now();
   const trailDots = trail.filter((p) => now - p.t <= TRAIL_MS && !isCalm(p.ws));
@@ -135,11 +302,11 @@ export function WindDial({ latest, trail, rose, units, stale, intervalMs }: Prop
       {Array.from({ length: 16 }, (_, i) => {
         const [x, y] = pt(i * 22.5, R_ROSE);
         const [x0, y0] = pt(i * 22.5, R_INNER);
-        return <line key={i} x1={x0} y1={y0} x2={x} y2={y} stroke="#15253f" />;
+        return <line key={i} x1={x0} y1={y0} x2={x} y2={y} stroke="#1a2a44" strokeWidth={0.35} />;
       })}
 
       <g className="rose-petals">
-        {petals.paths.map((p, i) => <path key={i} d={p.d} fill={p.color} fillOpacity={0.82} stroke="#070d1a" strokeWidth="0.6" />)}
+        {petals.paths.map((p, i) => <path key={i} d={p.d} fill={p.color} fillOpacity={0.88} stroke="#0a1220" strokeWidth="0.25" />)}
       </g>
       {petals.max > 0 && (
         <text x={C + 4} y={C - R_ROSE + 12} className="dial-small" fill="#5b7299">{Math.round(petals.max * 100)}%</text>
@@ -161,30 +328,36 @@ export function WindDial({ latest, trail, rose, units, stale, intervalMs }: Prop
         {trailDots.map((p) => {
           const age = (now - p.t) / TRAIL_MS;
           const [x, y] = pt(p.wd, R_OUTER - 18);
-          return <circle key={p.t} cx={x} cy={y} r={3 + 3 * (1 - age)} fill={forceColor(p.ws)} opacity={Math.max(0.05, 0.9 * (1 - age))} />;
+          return <circle key={p.t} cx={x} cy={y} r={3 + 3 * (1 - age)} fill={NEEDLE_AQUA} opacity={Math.max(0.05, 0.9 * (1 - age))} />;
         })}
       </g>
 
       {!calm && !reduced && ghosts.map((p, i) => (
         <g key={p.t} transform={`rotate(${p.wd} ${C} ${C})`} opacity={0.08 + (0.22 * (i + 1)) / GHOSTS} className="ghost">
-          <path d={`M${C},${C - R_OUTER + 22} L${C + 7},${C - R_OUTER + 44} L${C - 7},${C - R_OUTER + 44} Z`} fill={forceColor(p.ws)} />
+          <WindShaftWaves color={NEEDLE_AQUA} ghost />
         </g>
       ))}
 
-      <g ref={needleRef} transform={`rotate(${anim.current.angle} ${C} ${C})`} style={{ opacity: calm || !latest ? 0 : 1, transition: 'opacity 600ms' }}>
-        {/* Arrow from the rim (where the wind comes from) toward the centre (where it blows). */}
-        <line x1={C} y1={C - R_OUTER + 24} x2={C} y2={C - R_INNER - 6} stroke={latest ? forceColor(latest.ws) : '#38bdf8'} strokeWidth="5" strokeLinecap="round" filter="url(#glow)" />
-        <path d={`M${C},${C - R_INNER + 2} L${C + 11},${C - R_INNER - 18} L${C - 11},${C - R_INNER - 18} Z`} fill={latest ? forceColor(latest.ws) : '#38bdf8'} filter="url(#glow)" />
-        <circle cx={C} cy={C - R_OUTER + 22} r="7" fill="#070d1a" stroke={latest ? forceColor(latest.ws) : '#38bdf8'} strokeWidth="3" />
+      {/* Needle + waves stay mounted while hidden in calm so the shared wave clock never drops. */}
+      <g ref={needleRef} transform={`rotate(${anim.current.angle} ${C} ${C})`} style={{ opacity: calm || !latest || reduced ? 0 : 1, transition: 'opacity 600ms' }}>
+        <WindShaftWaves color={NEEDLE_AQUA} />
+        <path
+          d={`M${C},${C - R_INNER + 2} L${C + 11},${C - R_INNER - 18} L${C - 11},${C - R_INNER - 18} Z`}
+          fill="#070d1a"
+          stroke={NEEDLE_AQUA}
+          strokeWidth="3"
+          strokeLinejoin="round"
+          filter="url(#glow)"
+        />
       </g>
 
       <circle cx={C} cy={C} r={R_INNER - 4} fill="#070d1a" stroke="#1e3354" />
       {latest || trail.length ? (
         <>
-          <text ref={speedRef} x={C} y={C - 2} textAnchor="middle" className="dial-speed">
+          <text ref={speedRef} x={C} y={C + 5} textAnchor="middle" className="dial-speed">
             {latest ? msToDisplay(latest.ws, units.wind).toFixed(decimals) : '—'}
           </text>
-          <text x={C} y={C + 22} textAnchor="middle" className="dial-unit">{units.wind}</text>
+          <text x={C} y={C + 29} textAnchor="middle" className="dial-unit">{units.wind}</text>
         </>
       ) : (
         <>
@@ -194,28 +367,28 @@ export function WindDial({ latest, trail, rose, units, stale, intervalMs }: Prop
           </text>
         </>
       )}
-      {latest && !calm && (
-        <text x={C} y={C + 36} textAnchor="middle" className="dial-small" fill="#7c8db0">{BEAUFORT_NAMES[beaufortForce(latest.ws) - 1]}</text>
-      )}
     </svg>
   );
 }
 
-export function ForceLegend({ units }: { units: DisplayUnits }) {
-  const edges = [0.3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7];
+export function ForceLegend({
+  units,
+  palette = PALETTE_CLASSIC,
+  maxSpeedMs = DEFAULT_MAX_SPEED_MS,
+}: {
+  units: DisplayUnits;
+  palette?: readonly string[];
+  maxSpeedMs?: number;
+}) {
+  const ticks = scaleTickLabels(maxSpeedMs, units.wind, 5);
   return (
-    <div className="force-legend" aria-label="Wind rose colour legend (Beaufort force)">
-      {edges.map((lo, i) => {
-        const hi = edges[i + 1];
-        const a = msToDisplay(lo, units.wind).toFixed(0);
-        const text = hi === undefined ? `${a}+` : `${a}–${msToDisplay(hi, units.wind).toFixed(0)}`;
-        return (
-          <span key={i} title={`Force ${i + 1}: ${BEAUFORT_NAMES[i]}`}>
-            <i style={{ background: FORCE_COLORS[i] }} />
-            {text}
-          </span>
-        );
-      })}
+    <div className="force-legend force-legend-scale" aria-label="Wind colour scale">
+      <div className="force-legend-bar" style={{ background: paletteGradientCss(palette) }} />
+      <div className="force-legend-ticks">
+        {ticks.map((tick) => (
+          <span key={tick.t} style={{ left: `${tick.t * 100}%` }}>{tick.label}</span>
+        ))}
+      </div>
       <span className="force-unit">{units.wind}</span>
     </div>
   );

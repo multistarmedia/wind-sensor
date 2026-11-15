@@ -2,7 +2,7 @@
 
 import type {
   BatchRequest, BatchResponse, DiagnosticsResponse, HistoryResponse, LogResponse, SessionResponse,
-  SettingsResponse, SettingsUpdate, StatusResponse, WindRoseResponse,
+  SettingsResponse, SettingsUpdate, StatusResponse, WindRoseResponse, WindStatsResponse,
 } from '../../../shared/api';
 
 export class ApiError extends Error {
@@ -84,6 +84,7 @@ export const api = {
   status: () => call<StatusResponse>('GET', '/api/status'),
   history: (from: Date, to: Date) => call<HistoryResponse>('GET', `/api/history?from=${from.toISOString()}&to=${to.toISOString()}`),
   windRose: (from: Date, to: Date) => call<WindRoseResponse>('GET', `/api/windrose?from=${from.toISOString()}&to=${to.toISOString()}`),
+  windStats: (from: Date, to: Date) => call<WindStatsResponse>('GET', `/api/wind-stats?from=${from.toISOString()}&to=${to.toISOString()}`),
   log: (before?: string | null) => call<LogResponse>('GET', `/api/log${before ? `?before=${encodeURIComponent(before)}` : ''}`),
   diagnostics: () => call<DiagnosticsResponse>('GET', '/api/diagnostics'),
   exportUrl: (from: Date, to: Date) => `/api/export.csv?from=${from.toISOString()}&to=${to.toISOString()}`,

@@ -5,7 +5,7 @@
       "kicker": "GETTING STARTED",
       "title": "Your wind sensor, live",
       "subtitle": "Wind, weather and logging for the Met One AIO 2.",
-      "chips": ["Live wind rose", "Temperature · humidity · pressure", "Logging and CSV"],
+      "chips": ["Live wind rose", "Resizable modules", "Logging and CSV"],
       "url": "wind-sensor.on-forge.com",
       "fine": ""
     }
@@ -64,7 +64,7 @@
     "caption": "On the right, the 10-minute average, the peak reading, and today's peak."
   },
   "s12-cards": {
-    "text": "Below, temperature with today's high and low, humidity, and pressure, each with its trend for the last hour."
+    "text": "Around the wind dial are temperature, humidity, pressure, rain, and solar. You can drag and resize each box. Save layout keeps your arrangement in this browser."
   },
   "s13-status": {
     "text": "The status strip along the top shows what's happening. If the internet drops, readings wait in the browser, and upload on their own."

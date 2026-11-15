@@ -5,11 +5,13 @@ import type { HistoryPoint } from '../../../shared/api';
 import { formatStationTime } from '../../../shared/time';
 import { cToDisplay, hpaToDisplay, msToDisplay, PRESSURE_DECIMALS, WIND_DECIMALS } from '../../../shared/units';
 import { compassPoint } from '../../../shared/wind';
+import { WIND_COLOR_PALETTES } from '../../../shared/windColors';
 import { ForceLegend, WindDial } from '../components/WindDial';
 import { api } from '../lib/api';
 import { useApp } from '../lib/context';
 import { tempUnitLabel } from '../lib/format';
 import { useCapture, usePoll } from '../lib/hooks';
+import { loadWindColorPrefs } from '../lib/windColorPrefs';
 
 const PRESETS = { '1 h': 3600_000, '24 h': 86_400_000, '7 days': 7 * 86_400_000 } as const;
 type Preset = keyof typeof PRESETS | 'custom';
@@ -24,6 +26,8 @@ export function History() {
   const cap = useCapture();
   const units = settings.station.displayUnits;
   const tz = settings.station.timeZone;
+  const windColors = loadWindColorPrefs();
+  const windPalette = WIND_COLOR_PALETTES[windColors.paletteId];
   const [preset, setPreset] = useState<Preset>('24 h');
   const [customFrom, setCustomFrom] = useState(toLocalInput(Date.now() - 3 * 86_400_000));
   const [customTo, setCustomTo] = useState(toLocalInput(Date.now()));
@@ -129,8 +133,8 @@ export function History() {
         {showSolar && chart('Solar radiation', 'W/m²', <Line dataKey="sr" name="Solar" stroke="#eab308" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />, [0, 'auto'])}
         <section className="panel chart-panel rose-panel">
           <h2>Wind rose <small>{rose.data ? `${rose.data.total.toLocaleString()} readings · ${rose.data.calm.toLocaleString()} calm` : ''}</small></h2>
-          <WindDial latest={null} trail={[]} rose={rose.data} units={units} stale={false} intervalMs={1000} />
-          <ForceLegend units={units} />
+          <WindDial latest={null} trail={[]} rose={rose.data} units={units} stale={false} intervalMs={1000} palette={windPalette} maxSpeedMs={windColors.maxSpeedMs} />
+          <ForceLegend units={units} palette={windPalette} maxSpeedMs={windColors.maxSpeedMs} />
         </section>
       </div>
       <p className="fine">Wind speed decimals: {WIND_DECIMALS[units.wind]}. Direction: mean of unit vectors per bucket, calm readings excluded; “unavailable” when directions cancel. {compassPoint(0)} = 0°.</p>

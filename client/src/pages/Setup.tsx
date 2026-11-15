@@ -14,7 +14,13 @@ export function timeZoneOptions() {
 export function Setup() {
   const { settings, setSettings, navigate } = useApp();
   const [step, setStep] = useState(1);
-  const [name, setName] = useState(settings.station.name === 'Weather station' ? '' : settings.station.name);
+  const [name, setName] = useState(
+    settings.station.name === 'Weather station'
+      || settings.station.name === 'AIO3 Weather Station'
+      || settings.station.name === 'AIO 3 Weather Station'
+      ? ''
+      : settings.station.name,
+  );
   const [tz, setTz] = useState(settings.station.timeZone === 'UTC' ? Intl.DateTimeFormat().resolvedOptions().timeZone : settings.station.timeZone);
   const [profile, setProfile] = useState<ProfileSettings>(settings.profile ?? SUGGESTED_PROFILE);
   const [errors, setErrors] = useState<string[]>([]);

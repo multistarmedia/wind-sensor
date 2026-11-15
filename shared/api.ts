@@ -78,6 +78,17 @@ export interface WindPoint {
   wd: number;
 }
 
+/** Windowed wind summary (Average / Peak / Mean dir for a chosen period). */
+export interface WindStatsResponse {
+  from: string;
+  to: string;
+  samples: number;
+  avgSpeedMs: number | null;
+  peakSpeedMs: number | null;
+  peakAt: string | null;
+  meanDirDeg: number | null;
+}
+
 export interface StatusResponse {
   serverTime: string;
   latest: ObservationView | null;

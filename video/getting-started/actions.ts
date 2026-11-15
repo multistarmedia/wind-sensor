@@ -114,13 +114,11 @@ export const ACTIONS: Record<string, { url?: string; action: SceneAction }> = {
   },
   "s12-cards": {
     action: async ({ page, pause }) => {
-      await glideTo(page, ".dash-grid > .stat-card:last-of-type", "end");
-      await spotlight(page, ".dash-grid > .stat-card >> nth=0");
+      await zoomOut(page);
+      await spotlight(page, ".console-tile >> nth=2");
       await pause(2200);
-      await spotlight(page, ".dash-grid > .stat-card >> nth=1");
-      await pause(1800);
-      await spotlight(page, ".dash-grid > .stat-card >> nth=2");
-      await pause(2200);
+      await spotlight(page, ".console-tile >> nth=0");
+      await pause(2800);
       await spotlightOff(page);
     },
   },
