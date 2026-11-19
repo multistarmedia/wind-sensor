@@ -62,16 +62,6 @@ export function Connection() {
 
         <Card>
           <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">Getting started video</Text>
-            <video className="guide-video" src="/videos/getting-started.mp4" poster="/videos/getting-started.jpg" controls preload="metadata" playsInline />
-            <Text as="p" variant="bodySm" tone="subdued">
-              2½ minutes with captions. Dashboard scenes use demo mode; history and log scenes use simulated readings, labelled on screen.
-            </Text>
-          </BlockStack>
-        </Card>
-
-        <Card>
-          <BlockStack gap="300">
             <InlineStack align="space-between" blockAlign="center">
               <Text as="h2" variant="headingMd">Instrument</Text>
               <PhaseBadge phase={cap.phase} mode={cap.mode} />

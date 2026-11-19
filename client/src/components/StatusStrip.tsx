@@ -1,8 +1,11 @@
 // Separate signals for local capture and server saving; a viewer sees server freshness only.
 
+import { useRef } from 'react';
 import type { StatusResponse } from '../../../shared/api';
-import type { CaptureSnapshot } from '../capture/controller';
+import { capture, type CaptureSnapshot } from '../capture/controller';
+import type { Route } from '../lib/context';
 import { ageText } from '../lib/format';
+import { enterAppFullscreen } from '../lib/fullscreen';
 
 type Tone = 'ok' | 'warn' | 'bad' | 'idle' | 'demo';
 
@@ -16,7 +19,44 @@ function Pill({ tone, label, detail }: { tone: Tone; label: string; detail?: str
   );
 }
 
-export function StatusStrip({ cap, server, now }: { cap: CaptureSnapshot; server: StatusResponse | null; now: number }) {
+/** Start simulator demo and open Live. Safe to call from a click handler. */
+export async function startDemoAndGoLive(navigate: (r: Route) => void) {
+  if (capture.snapshot.mode !== 'off') await capture.disconnect();
+  await capture.startDemo();
+  navigate('dashboard');
+  await enterAppFullscreen();
+}
+
+function DemoStartButton({ onStartDemo }: { onStartDemo: () => void }) {
+  const onStartDemoRef = useRef(onStartDemo);
+  onStartDemoRef.current = onStartDemo;
+
+  return (
+    <button
+      type="button"
+      className="status-demo-btn"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onStartDemoRef.current();
+      }}
+    >
+      Try the demo first
+    </button>
+  );
+}
+
+export function StatusStrip({
+  cap,
+  server,
+  now,
+  onStartDemo,
+}: {
+  cap: CaptureSnapshot;
+  server: StatusResponse | null;
+  now: number;
+  onStartDemo?: () => void;
+}) {
   if (cap.mode === 'demo') {
     return (
       <div className="status-strip">
@@ -53,5 +93,11 @@ export function StatusStrip({ cap, server, now }: { cap: CaptureSnapshot; server
       <Pill key="srv" tone={tone} label="Station on server" detail={age === null ? 'no saved readings yet' : `last saved reading ${ageText(age)}${server.capture.active ? '' : ' · capture computer offline'}`} />,
     );
   }
-  return <div className="status-strip">{pills}</div>;
+
+  return (
+    <div className="status-strip">
+      {pills}
+      {cap.mode === 'off' && onStartDemo && <DemoStartButton onStartDemo={onStartDemo} />}
+    </div>
+  );
 }

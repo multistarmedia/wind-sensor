@@ -24,7 +24,6 @@ export function Login({ onSignedIn, pendingNote }: { onSignedIn: () => void; pen
   return (
     <div className="login-page">
       <div className="login-wrap">
-        <div className="login-portrait" aria-hidden="true" />
         <div className="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="#38bdf8" strokeWidth="3" /><path d="M32 8 L40 34 L32 28 L24 34 Z" fill="#38bdf8" /></svg>
         </div>

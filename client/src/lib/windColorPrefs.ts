@@ -1,5 +1,6 @@
 // Browser-local wind colour scale prefs (palette + continuous max colour speed).
 
+import { useEffect, useState } from 'react';
 import { BEAUFORT_EDGES_MS } from '../../../shared/wind';
 import {
   clampMaxSpeedMs, DEFAULT_MAX_SPEED_MS, type WindPaletteId,
@@ -7,6 +8,7 @@ import {
 
 const KEY = 'aio2.windColorScale.v2';
 const LEGACY_KEY = 'aio2.windColorScale.v1';
+const CHANGE_EVENT = 'aio2.windColorScale';
 
 export interface WindColorPrefs {
   paletteId: WindPaletteId;
@@ -60,4 +62,45 @@ export function saveWindColorPrefs(prefs: WindColorPrefs) {
   } catch {
     // ignore
   }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: prefs }));
+  }
+}
+
+/** Shared wind colour prefs; stays in sync when Wind tile (or any caller) updates them. */
+export function useWindColorPrefs(): [
+  WindColorPrefs,
+  (next: Partial<Pick<WindColorPrefs, 'paletteId' | 'maxSpeedMs'>>) => void,
+] {
+  const [prefs, setPrefs] = useState(loadWindColorPrefs);
+
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent<WindColorPrefs>).detail;
+      if (detail?.paletteId) setPrefs(detail);
+      else setPrefs(loadWindColorPrefs());
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === KEY || e.key === LEGACY_KEY) setPrefs(loadWindColorPrefs());
+    };
+    window.addEventListener(CHANGE_EVENT, onChange);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, onChange);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  function update(next: Partial<Pick<WindColorPrefs, 'paletteId' | 'maxSpeedMs'>>) {
+    setPrefs((prev) => {
+      const merged: WindColorPrefs = {
+        paletteId: next.paletteId ?? prev.paletteId,
+        maxSpeedMs: clampMaxSpeedMs(next.maxSpeedMs ?? prev.maxSpeedMs),
+      };
+      saveWindColorPrefs(merged);
+      return merged;
+    });
+  }
+
+  return [prefs, update];
 }

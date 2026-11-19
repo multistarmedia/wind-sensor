@@ -11,9 +11,6 @@ backups/
 .DS_Store
 coverage/
 
-# narrated video outputs
-video/out/
-video/.data/
 test-results/
 
 # Forge paste-ins (contain secrets)

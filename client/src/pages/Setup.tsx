@@ -4,7 +4,6 @@ import { SUGGESTED_PROFILE, type ProfileSettings } from '../../../shared/profile
 import { ProfileForm } from '../components/ProfileForm';
 import { api, ApiError } from '../lib/api';
 import { useApp } from '../lib/context';
-import { capture } from '../capture/controller';
 
 export function timeZoneOptions() {
   const zones = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone') ?? ['UTC'];
@@ -41,17 +40,13 @@ export function Setup() {
       <BlockStack gap="400">
         <Text as="h1" variant="headingXl">Set up your station</Text>
         <Text as="p" tone="subdued">Step {step} of 2. After this you’ll connect the instrument and see its first line next to the interpreted values.</Text>
-        {step === 1 && (
-          <video className="guide-video" src="/videos/getting-started.mp4" poster="/videos/getting-started.jpg" controls preload="metadata" playsInline />
-        )}
         {errors.length > 0 && <Banner tone="critical" title="Please fix"><ul>{errors.map((e) => <li key={e}>{e}</li>)}</ul></Banner>}
         {step === 1 && (
           <Card>
             <FormLayout>
               <TextField label="Station name" value={name} onChange={setName} autoComplete="off" placeholder="e.g. Ridge top" maxLength={80} />
               <Select label="Station time zone" options={zones} value={tz} onChange={setTz} helpText="“Today” highs, lows and peaks run midnight to midnight in this zone." />
-              <InlineStack align="space-between">
-                <Button onClick={() => void capture.startDemo().then(() => navigate('dashboard'))}>Try the demo first</Button>
+              <InlineStack align="end">
                 <Button variant="primary" disabled={!name.trim()} onClick={() => setStep(2)}>Next: instrument output</Button>
               </InlineStack>
             </FormLayout>
