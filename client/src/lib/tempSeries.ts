@@ -17,12 +17,12 @@ export const TEMP_WINDOWS = [
   { id: '36h', label: '36h', ms: 36 * 3600_000, subtitle: '36-Hour Multi-Day Profile' },
   { id: '48h', label: '48h', ms: 48 * 3600_000, subtitle: '48-Hour Two-Day Profile' },
   { id: '72h', label: '72h', ms: 72 * 3600_000, subtitle: '72-Hour Three-Day Trend' },
-  { id: '5d', label: '5 d', ms: 5 * 86_400_000, subtitle: '5-Day Extended Profile' },
-  { id: '7d', label: '7 d', ms: 7 * 86_400_000, subtitle: '7-Day Weekly Thermal Trend' },
-  { id: '10d', label: '10 d', ms: 10 * 86_400_000, subtitle: '10-Day Extended Profile' },
+  { id: '5d', label: '5d', ms: 5 * 86_400_000, subtitle: '5-Day Extended Profile' },
+  { id: '7d', label: '7d', ms: 7 * 86_400_000, subtitle: '7-Day Weekly Thermal Trend' },
+  { id: '10d', label: '10d', ms: 10 * 86_400_000, subtitle: '10-Day Extended Profile' },
 ] as const;
 
-/** Top row: 1h–24h. Bottom row: 36h–10 d. */
+/** Top row: 1h–24h. Bottom row: 36h–10d. */
 export const TEMP_WINDOW_ROWS = [TEMP_WINDOWS.slice(0, 6), TEMP_WINDOWS.slice(6)] as const;
 
 export type TempWindowId = (typeof TEMP_WINDOWS)[number]['id'];
@@ -30,6 +30,8 @@ export type TempWindowId = (typeof TEMP_WINDOWS)[number]['id'];
 export interface TempPoint {
   t: number;
   temp: number | null;
+  /** Smoothed mid-spine through the detail (same role as baro avg). */
+  avg: number | null;
   dew: number | null;
   feels: number | null;
 }
@@ -47,25 +49,29 @@ export function useTempProfile(windowId: TempWindowId) {
 
   const points = useMemo(() => {
     const show = (c: number | null) => (c == null ? null : cToDisplay(c, station.units.temp));
+    let raw: TempPoint[];
 
     // Demo never hits the server — build the full selected window locally so every pill changes the graph.
     if (station.demo) {
-      return demoTempSeries(station.now, win.ms, station.cap.recent, show);
+      raw = demoTempSeries(station.now, win.ms, station.cap.recent, show);
+    } else {
+      const recent = station.cap.recent;
+      const recentSpan = recent.length > 0 ? station.now - recent[0]!.t : 0;
+      if (recent.length > 0 && win.ms <= recentSpan + 60_000) {
+        raw = fromRecent(recent, station.now - win.ms, show);
+      } else if (!hist.data) {
+        raw = [];
+      } else {
+        raw = hist.data.points.map((p) => {
+          const tempC = p.atAvg;
+          const dewC = tempC == null || p.rhAvg == null ? null : dewPointC(tempC, p.rhAvg);
+          const feelsC = tempC == null ? null : feelsLikeC(tempC, p.rhAvg ?? 50, p.wsAvg ?? 0);
+          return { t: p.t, temp: show(tempC), avg: null, dew: show(dewC), feels: show(feelsC) };
+        });
+      }
     }
 
-    const recent = station.cap.recent;
-    const recentSpan = recent.length > 0 ? station.now - recent[0]!.t : 0;
-    if (recent.length > 0 && win.ms <= recentSpan + 60_000) {
-      return fromRecent(recent, station.now - win.ms, show);
-    }
-
-    if (!hist.data) return [] as TempPoint[];
-    return hist.data.points.map((p) => {
-      const tempC = p.atAvg;
-      const dewC = tempC == null || p.rhAvg == null ? null : dewPointC(tempC, p.rhAvg);
-      const feelsC = tempC == null ? null : feelsLikeC(tempC, p.rhAvg ?? 50, p.wsAvg ?? 0);
-      return { t: p.t, temp: show(tempC), dew: show(dewC), feels: show(feelsC) };
-    });
+    return withTempAverage(raw, win.ms);
   }, [station.demo, station.cap.recent, station.now, station.units.temp, win.ms, hist.data]);
 
   const extremes = useMemo(() => {
@@ -192,9 +198,9 @@ function demoTempSeries(
   const hourMs = 3600_000;
   const longWindow = windowMs >= 48 * hourMs;
   const mediumWindow = windowMs >= 3 * hourMs && !longWindow;
-  // Fewer samples on medium ranges keep the SVG path from looking sawtoothed.
-  const perDay = longWindow ? 12 : mediumWindow ? 16 : 24;
-  const n = Math.min(480, Math.max(mediumWindow ? 96 : 180, Math.round((windowMs / dayMs) * perDay)));
+  // Dense vertices for a crisp monotone path in the same chart box.
+  const perDay = longWindow ? 72 : mediumWindow ? 96 : 180;
+  const n = Math.min(1600, Math.max(mediumWindow ? 360 : 480, Math.round((windowMs / dayMs) * perDay)));
   const step = windowMs / Math.max(1, n - 1);
   const sample = longWindow ? syntheticWeather : mediumWindow ? syntheticMedium : syntheticShort;
 
@@ -205,6 +211,7 @@ function demoTempSeries(
     out.push({
       t,
       temp: show(at),
+      avg: null,
       dew: show(dewPointC(at, rh)),
       feels: show(feelsLikeC(at, rh, ws)),
     });
@@ -218,6 +225,7 @@ function demoTempSeries(
     const tip = out[out.length - 1]!;
     tip.t = Math.max(tip.t, last.t);
     tip.temp = show(last.m.airTempC);
+    tip.avg = tip.temp;
     tip.dew = show(dewPointC(last.m.airTempC, last.m.rhPct));
     tip.feels = show(feelsLikeC(last.m.airTempC, last.m.rhPct, last.m.windSpeedMs));
     return out;
@@ -236,7 +244,8 @@ function fromRecent(
 ): TempPoint[] {
   const slice = recent.filter((o) => o.t >= since);
   if (slice.length === 0) return [];
-  const size = Math.max(1, Math.ceil(slice.length / 220));
+  // Keep denser live detail (cap ~900 pts) so short windows stay sharp.
+  const size = Math.max(1, Math.ceil(slice.length / 900));
   const out: TempPoint[] = [];
   for (let i = 0; i < slice.length; i += size) {
     const group = slice.slice(i, i + size);
@@ -248,9 +257,36 @@ function fromRecent(
     out.push({
       t: last.t,
       temp: show(tempC),
+      avg: null,
       dew: show(dewPointC(tempC, rh)),
       feels: show(feelsLikeC(tempC, rh, ws)),
     });
   }
   return out;
+}
+
+/** Centered moving average so a solid lighter line sits through the detail. */
+function withTempAverage(points: TempPoint[], windowMs: number): TempPoint[] {
+  if (points.length === 0) return points;
+  const half = Math.max(1, Math.min(20 * 60_000, Math.max(3 * 60_000, windowMs / 40)) / 2);
+  return points.map((p, i) => {
+    if (p.temp == null) return { ...p, avg: null };
+    let sum = 0;
+    let n = 0;
+    for (let j = i; j >= 0; j--) {
+      const q = points[j]!;
+      if (p.t - q.t > half) break;
+      if (q.temp == null) continue;
+      sum += q.temp;
+      n++;
+    }
+    for (let j = i + 1; j < points.length; j++) {
+      const q = points[j]!;
+      if (q.t - p.t > half) break;
+      if (q.temp == null) continue;
+      sum += q.temp;
+      n++;
+    }
+    return { ...p, avg: n > 0 ? sum / n : p.temp };
+  });
 }

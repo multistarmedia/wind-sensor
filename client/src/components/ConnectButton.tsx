@@ -2,6 +2,7 @@ import { Button, InlineStack } from '@shopify/polaris';
 import { useEffect, useState } from 'react';
 import { capture } from '../capture/controller';
 import { useApp } from '../lib/context';
+import { exitAppFullscreen } from '../lib/fullscreen';
 import { useCapture } from '../lib/hooks';
 import { describePort, grantedPorts, serialSupport } from '../serial/webSerial';
 
@@ -17,7 +18,17 @@ export function ConnectButton({ size = 'large' }: { size?: 'slim' | 'medium' | '
   }, [cap.mode]);
 
   if (cap.mode === 'demo') {
-    return <Button size={size} onClick={() => void capture.disconnect()}>Exit demo</Button>;
+    return (
+      <Button
+        size={size}
+        onClick={() => {
+          void capture.disconnect();
+          void exitAppFullscreen();
+        }}
+      >
+        Exit demo
+      </Button>
+    );
   }
   if (cap.mode === 'real') {
     return (

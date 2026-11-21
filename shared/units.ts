@@ -37,7 +37,7 @@ export interface DisplayUnits {
   rain: (typeof RAIN_DISPLAY_UNITS)[number];
 }
 
-export const DEFAULT_DISPLAY_UNITS: DisplayUnits = { wind: 'mph', temp: 'F', pressure: 'inHg', rain: 'in' };
+export const DEFAULT_DISPLAY_UNITS: DisplayUnits = { wind: 'm/s', temp: 'C', pressure: 'hPa', rain: 'in' };
 
 export function validateDisplayUnits(o: unknown): DisplayUnits | null {
   const d = (o ?? {}) as Record<string, unknown>;

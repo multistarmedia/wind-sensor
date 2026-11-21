@@ -4,8 +4,8 @@ import { formatStationTime } from '../../../../shared/time';
 import { msToDisplay, WIND_DISPLAY_UNITS, type DisplayUnits } from '../../../../shared/units';
 import { beaufortForce, BEAUFORT_NAMES, compassPoint, isCalm } from '../../../../shared/wind';
 import {
-  clampMaxSpeedMs, displayToMs, maxSpeedSliderBounds, paletteGradientCss,
-  WIND_COLOR_PALETTES, WIND_PALETTE_OPTIONS, type WindPaletteId,
+  displayToMs, maxSpeedSliderBounds, paletteGradientCss,
+  WIND_COLOR_PALETTES, WIND_PALETTE_OPTIONS,
 } from '../../../../shared/windColors';
 import {
   DEFAULT_WIND_STAT_WINDOW, WIND_STAT_WINDOWS, windStatWindow, type WindStatWindowId,
@@ -16,7 +16,7 @@ import { api } from '../../lib/api';
 import { DASH, windText } from '../../lib/format';
 import { usePoll } from '../../lib/hooks';
 import { localWindRose, localWindStats } from '../../lib/local';
-import { loadWindColorPrefs, saveWindColorPrefs } from '../../lib/windColorPrefs';
+import { useWindColorPrefs } from '../../lib/windColorPrefs';
 import { useStationNow } from '../../lib/station';
 import { TileShell } from './TileShell';
 
@@ -31,9 +31,9 @@ const REFERENCE_TEXT = {
 
 export function WindTile() {
   const s = useStationNow();
-  const [roseWindow, setRoseWindow] = useState<RoseWindow>('1h');
+  const [roseWindow, setRoseWindow] = useState<RoseWindow>('10m');
   const [statWindowId, setStatWindowId] = useState<WindStatWindowId>(DEFAULT_WIND_STAT_WINDOW);
-  const [colorPrefs, setColorPrefs] = useState(loadWindColorPrefs);
+  const [colorPrefs, updateColorPrefs] = useWindColorPrefs();
   const statWin = windStatWindow(statWindowId);
   const statsPollMs = statWin.ms <= 60_000 ? 2_000 : 15_000;
   const serverRose = usePoll(s.demo ? null : () => api.windRose(new Date(Date.now() - ROSE_WINDOWS[roseWindow]), new Date()), 15_000, [roseWindow]);
@@ -55,17 +55,6 @@ export function WindTile() {
   const bounds = maxSpeedSliderBounds(s.units.wind);
   const maxDisplay = msToDisplay(maxSpeedMs, s.units.wind);
   const sliderValue = Math.min(bounds.max, Math.max(bounds.min, maxDisplay));
-
-  function updateColorPrefs(next: Partial<{ paletteId: WindPaletteId; maxSpeedMs: number }>) {
-    setColorPrefs((prev) => {
-      const merged = {
-        paletteId: next.paletteId ?? prev.paletteId,
-        maxSpeedMs: clampMaxSpeedMs(next.maxSpeedMs ?? prev.maxSpeedMs),
-      };
-      saveWindColorPrefs(merged);
-      return merged;
-    });
-  }
 
   function setMaxFromDisplay(displayVal: number) {
     if (!Number.isFinite(displayVal)) return;

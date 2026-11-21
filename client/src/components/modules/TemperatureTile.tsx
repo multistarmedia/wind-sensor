@@ -1,16 +1,19 @@
 import { useCallback, useState } from 'react';
-import { formatStationTime } from '../../../../shared/time';
 import { cToDisplay, type DisplayUnits } from '../../../../shared/units';
+import { schemeChartColors } from '../../../../shared/windColors';
+import { useWindColorPrefs } from '../../lib/windColorPrefs';
 import { TEMP_WINDOW_ROWS, type TempPoint, type TempWindowId, useTempProfile } from '../../lib/tempSeries';
 import { TemperatureChart } from './TemperatureChart';
 import { TileShell } from './TileShell';
 
 export function TemperatureTile() {
-  const [windowId, setWindowId] = useState<TempWindowId>('24h');
+  const [windowId, setWindowId] = useState<TempWindowId>('1h');
   const [showBadges, setShowBadges] = useState(true);
   const [showDew, setShowDew] = useState(false);
   const [showFeels, setShowFeels] = useState(false);
   const [cursor, setCursor] = useState<TempPoint | null>(null);
+  const [colorPrefs] = useWindColorPrefs();
+  const colors = schemeChartColors(colorPrefs.paletteId);
   const s = useTempProfile(windowId);
   const unitIsF = s.units.temp === 'F';
   const degree = unitIsF ? '°F' : '°C';
@@ -18,7 +21,13 @@ export function TemperatureTile() {
   const shown = cursor?.temp ?? liveTemp;
   const hi = s.extremes.hi?.temp ?? null;
   const lo = s.extremes.lo?.temp ?? null;
-  const clock = formatStationTime(cursor?.t ?? s.latestAt ?? s.now, s.tz, { hour: 'numeric', minute: '2-digit' });
+  // Always this computer’s local wall clock (demo and live) — not station TZ or chart scrub.
+  const clockMs = s.now;
+  const clock = new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(clockMs));
 
   const onCursor = useCallback((p: TempPoint | null) => {
     setCursor((prev) => {
@@ -38,7 +47,7 @@ export function TemperatureTile() {
             <i />
             {s.stale ? 'Stale' : 'Live'}
           </span>
-          <time className="temp-live-clock" dateTime={new Date(cursor?.t ?? s.latestAt ?? s.now).toISOString()}>
+          <time className="temp-live-clock" dateTime={new Date(clockMs).toISOString()}>
             {clock}
           </time>
         </div>
@@ -84,6 +93,7 @@ export function TemperatureTile() {
             showBadges={showBadges}
             showDew={showDew}
             showFeels={showFeels}
+            colors={colors}
             onCursor={onCursor}
           />
         </div>

@@ -41,7 +41,6 @@ The parser/checksum lives in `shared/` so client and server validate identically
 - Default environment is `node`. React/DOM tests (`.test.tsx`) opt in with a `// @vitest-environment jsdom` first line and use `@testing-library/react` (see `tests/context.test.tsx`).
 - IndexedDB tests use `fake-indexeddb` with a fresh `IDBFactory` per test (`tests/queue.test.ts`).
 - When asserting a render throws, silence React's dev error replay (spy on `console.error` and `preventDefault` the window `error` event) or the output fills with stack traces.
-- `video/record.spec.ts` is a Playwright script for the narrated video, not part of `npm test`.
 
 ## Build order
 

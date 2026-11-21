@@ -37,6 +37,29 @@ export const WIND_PALETTE_OPTIONS: { id: WindPaletteId; label: string }[] = [
   { id: 'warm', label: 'Warm' },
 ];
 
+/** Primary detail stroke, solid average stroke, and area fill for scheme-linked charts. */
+export type SchemeChartColors = { line: string; average: string; fill: string };
+/** @deprecated Prefer SchemeChartColors */
+export type PressureChartColors = SchemeChartColors;
+
+/**
+ * Chart strokes from each wind palette ramp (Classic / Cool / Warm):
+ * primary line stays further down (darker); average / secondary is a lighter stop.
+ */
+export function schemeChartColors(paletteId: WindPaletteId): SchemeChartColors {
+  const palette = WIND_COLOR_PALETTES[paletteId];
+  return {
+    line: paletteColorAt(0.72, palette),
+    average: paletteColorAt(0.32, palette),
+    fill: paletteColorAt(0.58, palette),
+  };
+}
+
+/** @deprecated Prefer schemeChartColors */
+export function pressureChartColors(paletteId: WindPaletteId): SchemeChartColors {
+  return schemeChartColors(paletteId);
+}
+
 export const CALM_COLOR = '#94a3b8';
 
 /** Default max = top Beaufort edge (~73 mph). */

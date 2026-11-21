@@ -44,8 +44,17 @@ export function usePoll<T>(load: (() => Promise<T>) | null, intervalMs: number, 
 export function useNow(intervalMs = 1000) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(t);
+    // Align to the wall-clock second so displayed clocks don’t lag by up to a full interval.
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      setNow(Date.now());
+      const delay = intervalMs <= 1000
+        ? Math.max(50, intervalMs - (Date.now() % intervalMs))
+        : intervalMs;
+      timer = setTimeout(tick, delay);
+    };
+    tick();
+    return () => clearTimeout(timer);
   }, [intervalMs]);
   return now;
 }

@@ -1,10 +1,11 @@
 import { Banner, Spinner } from '@shopify/polaris';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SettingsResponse } from '../../shared/api';
 import { capture } from './capture/controller';
-import { StatusStrip } from './components/StatusStrip';
+import { startDemoAndGoLive, StatusStrip } from './components/StatusStrip';
 import { api, onClockSkew, onUnauthenticated } from './lib/api';
 import { AppContext, type Route } from './lib/context';
+import { enterAppFullscreen, exitAppFullscreen } from './lib/fullscreen';
 import { useCapture, useNow, usePoll } from './lib/hooks';
 import { Connection } from './pages/Connection';
 import { Dashboard } from './pages/Dashboard';
@@ -71,6 +72,37 @@ export function App() {
     capture.uploader.resumeAfterAuth();
   }, [auth]);
 
+  // Land on Live in demo mode after sign-in / refresh (unless already capturing).
+  const didBootDemo = useRef(false);
+  useEffect(() => {
+    if (auth !== 'in' || !settings || didBootDemo.current) return;
+    if (capture.snapshot.mode === 'real') return;
+    didBootDemo.current = true;
+    void (async () => {
+      if (capture.snapshot.mode === 'off') await startDemoAndGoLive(navigate);
+      // Demo defaults: m/s, °C, hPa; if TZ is still the install default UTC, use this PC’s zone
+      // so the Live clock matches the wall clock.
+      const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setSettings((prev) => {
+        if (!prev) return prev;
+        const timeZone = prev.station.timeZone === 'UTC' && browserTz ? browserTz : prev.station.timeZone;
+        return {
+          ...prev,
+          station: {
+            ...prev.station,
+            timeZone,
+            displayUnits: {
+              ...prev.station.displayUnits,
+              wind: 'm/s',
+              temp: 'C',
+              pressure: 'hPa',
+            },
+          },
+        };
+      });
+    })();
+  }, [auth, settings, navigate]);
+
   // Warn before leaving while capturing or with readings not yet on the server.
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => {
@@ -111,7 +143,8 @@ export function App() {
             <p>It differs from the server by about {Math.round(Math.abs(skew) / 1000)} s. Readings are timestamped by this browser, so set the clock to update automatically (Windows: Settings → Time &amp; language → Set time automatically).</p>
           </Banner>
         )}
-        {!settings.station.setupComplete && cap.mode !== 'demo' ? <Setup /> : <Page route={route} onSignOut={() => void signOut()} />}
+        {/* Setup only when not on Live demo and station setup is unfinished. */}
+        {!settings.station.setupComplete && cap.mode === 'off' ? <Setup /> : <Page route={route} onSignOut={() => void signOut()} />}
       </Shell>
     </AppContext.Provider>
   );
@@ -127,17 +160,30 @@ function Page({ route, onSignOut }: { route: Route; onSignOut: () => void }) {
   }
 }
 
-function Shell({ route, navigate, name, children }: { route: Route; navigate: (r: Route) => void; name: string; children: React.ReactNode }) {
+function Shell({ route, navigate, name, children }: { route: Route; navigate: (r: Route) => void; name: string; children: ReactNode }) {
   const cap = useCapture();
   const now = useNow(1000);
   const server = usePoll(cap.mode === 'demo' ? null : () => api.status(), 5000);
+  const onStartDemo = useCallback(() => { void startDemoAndGoLive(navigate); }, [navigate]);
+
+  // Demo defaults to browser fullscreen. Auto-boot may be blocked until the first click.
+  useEffect(() => {
+    if (cap.mode !== 'demo') {
+      void exitAppFullscreen();
+      return;
+    }
+    void enterAppFullscreen();
+    const onFirstGesture = () => { void enterAppFullscreen(); };
+    window.addEventListener('pointerdown', onFirstGesture, { once: true, capture: true });
+    return () => window.removeEventListener('pointerdown', onFirstGesture, true);
+  }, [cap.mode]);
+
   return (
     <div className={`shell${cap.mode === 'demo' ? ' is-demo' : ''}`}>
-      {cap.mode === 'demo' && <div className="demo-ribbon" role="status">Demo — simulated data · nothing here is a real reading</div>}
       <header className="topbar">
         <div className="brand">
           <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="#38bdf8" strokeWidth="2" /><path d="M16 4 L20 17 L16 14 L12 17 Z" fill="#38bdf8" /></svg>
-          <span>{name === 'Weather station' || name === 'AIO3 Weather Station' ? 'AIO 3 Weather Station' : name}</span>
+          <span>{name === 'Weather station' || name === 'AIO3 Weather Station' || name === 'AIO 3 Weather Station' ? 'AIO 3 Weather Station' : name}</span>
         </div>
         <nav aria-label="Main">
           {ROUTES.map((r) => (
@@ -145,7 +191,7 @@ function Shell({ route, navigate, name, children }: { route: Route; navigate: (r
           ))}
         </nav>
       </header>
-      <StatusStrip cap={cap} server={server.data} now={now} />
+      <StatusStrip cap={cap} server={server.data} now={now} onStartDemo={onStartDemo} />
       <main>{children}</main>
     </div>
   );

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BEAUFORT_EDGES_MS, CALM_THRESHOLD_MS } from '../shared/wind';
 import {
   bandColor, clampMaxSpeedMs, DEFAULT_MAX_SPEED_MS, displayToMs, paletteColorAt,
-  PALETTE_CLASSIC, PALETTE_WARM, speedScaleT, windSpeedColor,
+  PALETTE_CLASSIC, PALETTE_COOL, PALETTE_WARM, schemeChartColors, speedScaleT, windSpeedColor,
 } from '../shared/windColors';
 
 describe('wind colour scale', () => {
@@ -51,5 +51,21 @@ describe('wind colour scale', () => {
     expect(clampMaxSpeedMs(0)).toBeGreaterThan(CALM_THRESHOLD_MS);
     expect(clampMaxSpeedMs(999)).toBe(60);
     expect(clampMaxSpeedMs(DEFAULT_MAX_SPEED_MS)).toBe(DEFAULT_MAX_SPEED_MS);
+  });
+
+  it('maps Classic / Cool / Warm to distinct darker scheme chart strokes', () => {
+    const classic = schemeChartColors('classic');
+    const cool = schemeChartColors('cool');
+    const warm = schemeChartColors('warm');
+    expect(classic.line).not.toBe(cool.line);
+    expect(cool.line).not.toBe(warm.line);
+    expect(classic.average).not.toBe(classic.line);
+    expect(cool.average).not.toBe(cool.line);
+    expect(warm.average).not.toBe(warm.line);
+    // Further down each ramp than the bright early stops.
+    expect(classic.line).not.toBe(PALETTE_CLASSIC[0]);
+    expect(classic.line).not.toBe(PALETTE_CLASSIC[3]);
+    expect(cool.line).not.toBe(PALETTE_COOL[3]);
+    expect(warm.line).not.toBe(PALETTE_WARM[3]);
   });
 });
